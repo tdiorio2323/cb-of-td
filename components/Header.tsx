@@ -1,0 +1,82 @@
+import React from 'react';
+import { HomeIcon, DiscoverIcon, DashboardIcon, SettingsIcon, MessagesIcon } from './icons';
+import RoleSwitcher from './RoleSwitcher';
+// FIX: Imported the `User` type to resolve the 'Cannot find name 'User'' error.
+import { User, UserRole } from '../types';
+
+interface HeaderProps {
+    currentUser: User;
+    switchUser: (role: UserRole) => void;
+    onNavigate: (view: string) => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ currentUser, switchUser, onNavigate }) => {
+  const role = currentUser.role;
+
+  const FanNav = () => (
+    <>
+      <button onClick={() => onNavigate('feed')} className="flex items-center space-x-2 text-light-2 hover:text-brand-primary transition-colors">
+        <HomeIcon/>
+        <span>Home</span>
+      </button>
+      <button onClick={() => onNavigate('discover')} className="flex items-center space-x-2 text-light-2 hover:text-brand-primary transition-colors">
+        <DiscoverIcon/>
+        <span>Discover</span>
+      </button>
+      <button onClick={() => onNavigate('messages')} className="flex items-center space-x-2 text-light-2 hover:text-brand-primary transition-colors">
+        <MessagesIcon/>
+        <span>Messages</span>
+      </button>
+    </>
+  );
+
+  const CreatorNav = () => (
+      <>
+        <button onClick={() => onNavigate('dashboard')} className="flex items-center space-x-2 text-light-2 hover:text-brand-primary transition-colors">
+          <DashboardIcon/>
+          <span>Dashboard</span>
+        </button>
+         <button onClick={() => onNavigate('messages')} className="flex items-center space-x-2 text-light-2 hover:text-brand-primary transition-colors">
+            <MessagesIcon/>
+            <span>Messages</span>
+        </button>
+        <button onClick={() => onNavigate('settings')} className="flex items-center space-x-2 text-light-2 hover:text-brand-primary transition-colors">
+            <SettingsIcon/>
+            <span>Settings</span>
+        </button>
+      </>
+  );
+
+  const AdminNav = () => (
+    <button onClick={() => onNavigate('dashboard')} className="flex items-center space-x-2 text-light-2 hover:text-brand-primary transition-colors">
+      <DashboardIcon/>
+      <span>Admin Panel</span>
+    </button>
+  );
+
+  return (
+    <header className="sticky top-0 z-40 bg-dark-1/80 backdrop-blur-lg border-b border-dark-3">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          <div 
+            className="cursor-pointer"
+            onClick={() => onNavigate(role === 'fan' ? 'feed' : 'dashboard')}
+          >
+            <img src="https://i.imgur.com/JRQ30XP.png" alt="CreatorHub Logo" className="h-8" />
+          </div>
+          <div className="flex items-center space-x-8">
+            <nav className="hidden md:flex items-center space-x-8">
+                {role === 'fan' && <FanNav />}
+                {role === 'creator' && <CreatorNav />}
+                {role === 'admin' && <AdminNav />}
+            </nav>
+            <RoleSwitcher currentRole={role} onSwitch={switchUser} />
+            <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-10 h-10 rounded-full border-2 border-dark-3"/>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+};
+
+export default Header;
