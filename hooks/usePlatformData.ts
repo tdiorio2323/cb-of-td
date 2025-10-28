@@ -14,7 +14,7 @@ const CREATORS_DB: Creator[] = [
     id: 'creator-1',
     name: 'Elena Voyage',
     handle: 'elenavoyage',
-    bio: 'Exploring the world one photo at a time. Join my journey for exclusive travel content and behind-the-scenes stories.',
+    bio: 'Exploring the world one photo at a time. Join my journey for **exclusive travel content** and behind-the-scenes stories. Check out my latest trip [here](https://example.com)!',
     avatarUrl: 'https://picsum.photos/seed/elena/200/200',
     bannerUrl: 'https://picsum.photos/seed/elenabanner/1200/400',
     isVerified: true,
@@ -181,6 +181,10 @@ export const usePlatformData = () => {
     return users.filter(user => user.subscribedTo.includes(creatorId)).length;
   }, [users]);
 
+  const updateCreatorProfile = useCallback((creatorId: string, newProfileData: Partial<Creator>) => {
+      setCreators(prev => prev.map(c => c.id === creatorId ? { ...c, ...newProfileData } : c));
+  }, []);
+
 
   // Admin functions
   const toggleCreatorVerification = useCallback((creatorId: string) => {
@@ -278,7 +282,7 @@ export const usePlatformData = () => {
     users, creators, posts, messages, typingStatus,
     getCreatorById, getPostsByCreatorId, getSubscribedPosts,
     followCreator, unfollowCreator, getFollowerCount,
-    addPost, getCreatorByUserId,
+    addPost, getCreatorByUserId, updateCreatorProfile,
     toggleCreatorVerification, removePost,
     // Messaging
     allUsersMap, getConversations, getMessages, sendMessage, getUnreadMessageCounts, markMessagesAsRead, getTotalUnreadCount,

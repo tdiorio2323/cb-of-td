@@ -4,6 +4,7 @@ import CreatePostModal from './CreatePostModal';
 import PostCard from './PostCard';
 import ProfileHeader from './ProfileHeader';
 import MessagingView from './MessagingView';
+import BottomNav from './BottomNav';
 // FIX: Import usePlatformData to resolve 'Cannot find name' error.
 import { usePlatformData } from '../hooks/usePlatformData';
 
@@ -23,6 +24,7 @@ const CreatorView: React.FC<CreatorViewProps> = ({ currentUser, navigation, onNa
       addPost, 
       allUsersMap,
       getFollowerCount,
+      updateCreatorProfile,
     } = platformData;
     
   const { view, params } = navigation;
@@ -69,12 +71,53 @@ const CreatorView: React.FC<CreatorViewProps> = ({ currentUser, navigation, onNa
   );
   
   const SettingsPage: React.FC<{creator: Creator}> = ({ creator }) => {
+    const [bio, setBio] = useState(creator.bio);
+    const maxChars = 300;
+
+    const handleSave = () => {
+        updateCreatorProfile(creator.id, { bio });
+        alert("Profile saved!");
+    };
+
+    const parseMarkdown = (text: string) => {
+        if (!text) return { __html: '' };
+        let html = text
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-brand-primary hover:underline">$1</a>');
+        return { __html: html };
+    };
+
     return (
         <div className="w-full max-w-2xl mx-auto bg-dark-2 p-8 rounded-lg">
-            <h1 className="text-2xl font-bold mb-6">Settings</h1>
+            <h1 className="text-2xl font-bold mb-6">Edit Profile</h1>
             
-            <div className="space-y-4">
-                <p className="text-light-3">Creator settings will be available here in a future update.</p>
+            <div className="space-y-6">
+                <div>
+                    <label htmlFor="bio" className="block text-sm font-medium text-light-3 mb-2">Your Bio (Supports Markdown)</label>
+                    <textarea
+                        id="bio"
+                        value={bio}
+                        onChange={(e) => setBio(e.target.value)}
+                        maxLength={maxChars}
+                        className="w-full bg-dark-3 p-3 rounded-lg text-light-1 focus:outline-none focus:ring-2 focus:ring-brand-primary min-h-[150px]"
+                        placeholder="Tell your fans a little about yourself..."
+                    />
+                    <p className={`text-sm mt-1 text-right ${bio.length >= maxChars ? 'text-red-400' : 'text-light-3'}`}>
+                        {bio.length} / {maxChars}
+                    </p>
+                </div>
+                <div>
+                    <h3 className="text-sm font-medium text-light-3 mb-2">Live Preview</h3>
+                    <div className="prose prose-invert bg-dark-3 p-4 rounded-lg min-h-[100px] text-light-2 max-w-none" dangerouslySetInnerHTML={parseMarkdown(bio)} />
+                </div>
+                 <div className="flex justify-end">
+                    <button onClick={handleSave} className="bg-brand-primary text-dark-1 font-bold py-2 px-6 rounded-full transition-colors hover:bg-brand-secondary">
+                        Save Changes
+                    </button>
+                </div>
             </div>
         </div>
     )
@@ -155,7 +198,7 @@ const CreatorView: React.FC<CreatorViewProps> = ({ currentUser, navigation, onNa
   
   return (
     <>
-      <main className="container mx-auto py-6 px-4 md:px-0 pb-24 md:pb-6">
+      <main className={`container mx-auto ${view === 'messages' ? 'h-[calc(100vh-8rem-1rem)] md:h-[calc(100vh-4rem-3rem)] p-0' : 'py-6 px-4 md:px-0 pb-24 md:pb-6'}`}>
         {renderContent()}
       </main>
       <CreatePostModal
@@ -164,6 +207,7 @@ const CreatorView: React.FC<CreatorViewProps> = ({ currentUser, navigation, onNa
         onSubmit={handleAddPost}
         creator={creatorProfile}
       />
+      <BottomNav role={currentUser.role} activeView={view} onNavigate={onNavigate} />
     </>
   );
 };

@@ -340,7 +340,7 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, initialConve
   );
 
   return (
-    <div className="w-full max-w-7xl mx-auto h-[calc(100vh-11rem)] bg-dark-2 rounded-lg overflow-hidden flex">
+    <div className="w-full max-w-7xl mx-auto h-full bg-dark-2 md:rounded-lg overflow-hidden flex">
       <ConversationList />
       <ChatWindow />
     </div>

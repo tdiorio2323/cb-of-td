@@ -16,12 +16,23 @@ interface ProfileHeaderProps {
 
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({ creator, postCount, followerCount, isFollowing, isOwnProfile, onFollowClick, onUnfollow, onEditProfile, onMessageClick }) => {
   
+  const parseMarkdown = (text: string) => {
+    if (!text) return { __html: '' };
+    let html = text
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')       // Italics
+      .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-brand-primary hover:underline">$1</a>'); // Links
+    return { __html: html };
+  };
+
   const renderButtons = () => {
     if (isOwnProfile) {
         return (
              <button 
                 onClick={onEditProfile}
-                className='bg-dark-3 text-light-2 px-6 py-2 rounded-full font-semibold transition-colors hover:bg-dark-1'
+                className='bg-brand-primary text-dark-1 px-6 py-2 rounded-full font-semibold transition-colors hover:bg-brand-secondary'
             >
                 Edit Profile
             </button>
@@ -72,7 +83,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ creator, postCount, follo
             </div>
             {renderButtons()}
         </div>
-        <p className="mt-4 text-light-2">{creator.bio}</p>
+        <div dangerouslySetInnerHTML={parseMarkdown(creator.bio)} className="mt-4 text-light-2 prose prose-invert max-w-none" />
         <div className="mt-4 flex space-x-6 text-sm">
             <p><span className="font-bold">{postCount}</span> <span className="text-light-3">Posts</span></p>
             <p><span className="font-bold">{followerCount.toLocaleString()}</span> <span className="text-light-3">Followers</span></p>

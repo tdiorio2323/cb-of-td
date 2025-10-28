@@ -1,9 +1,7 @@
-
 import React from 'react';
 import { User } from '../types';
 import { usePlatformData } from '../hooks/usePlatformData';
 import { VerifiedIcon, UnverifiedIcon, DeleteIcon } from './icons';
-import PostCard from './PostCard';
 
 interface AdminViewProps {
   currentUser: User;
@@ -44,7 +42,33 @@ const AdminView: React.FC<AdminViewProps> = ({ currentUser, platformData }) => {
         {/* Creator Management */}
         <div>
             <h2 className="text-2xl font-bold mb-4">Creator Management</h2>
-            <div className="bg-dark-2 rounded-lg overflow-hidden">
+            {/* Mobile View: Cards */}
+            <div className="md:hidden space-y-4">
+              {creators.map(creator => (
+                <div key={creator.id} className="bg-dark-2 rounded-lg p-4">
+                  <div className="flex items-center space-x-4">
+                    <img src={creator.avatarUrl} alt={creator.name} className="w-12 h-12 rounded-full"/>
+                    <div className="flex-grow">
+                      <p className="font-bold text-light-1">{creator.name}</p>
+                      <p className="text-sm text-light-3">@{creator.handle}</p>
+                    </div>
+                    <div>
+                      {creator.isVerified ? <VerifiedIcon /> : <UnverifiedIcon />}
+                    </div>
+                  </div>
+                  <div className="mt-4 text-right">
+                    <button 
+                      onClick={() => toggleCreatorVerification(creator.id)}
+                      className={`px-4 py-2 text-xs rounded-full font-semibold ${creator.isVerified ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}`}
+                    >
+                      {creator.isVerified ? 'Unverify' : 'Verify'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Desktop View: Table */}
+            <div className="hidden md:block bg-dark-2 rounded-lg overflow-hidden">
                 <table className="w-full text-left">
                     <thead className="bg-dark-3">
                         <tr>
@@ -84,17 +108,41 @@ const AdminView: React.FC<AdminViewProps> = ({ currentUser, platformData }) => {
         <div>
             <h2 className="text-2xl font-bold mb-4">Content Moderation</h2>
             <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-                {posts.map(post => (
-                    <div key={post.id} className="bg-dark-2 p-4 rounded-lg flex justify-between items-start">
-                        <div>
-                            <p className="text-sm text-light-3">@{getCreatorById(post.creatorId)?.handle}</p>
-                            <p className="mt-1 text-light-1">{post.text.substring(0, 100)}{post.text.length > 100 && '...'}</p>
+                {posts.map(post => {
+                    const creator = getCreatorById(post.creatorId);
+                    return (
+                        <div key={post.id} className="bg-dark-2 p-4 rounded-lg">
+                            <div className="flex justify-between items-start">
+                                <div className="flex items-start space-x-3 flex-grow overflow-hidden">
+                                    {creator && (
+                                        <img src={creator.avatarUrl} alt={creator.name} className="w-10 h-10 rounded-full flex-shrink-0 mt-1" />
+                                    )}
+                                    <div className="flex-grow overflow-hidden">
+                                        <p className="text-sm font-semibold text-light-1 truncate">
+                                            {creator ? creator.name : 'Unknown Creator'}
+                                            <span className="text-light-3 font-normal ml-2">@{creator?.handle}</span>
+                                        </p>
+                                        <p className="mt-1 text-light-2 break-words">
+                                            {post.text}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => removePost(post.id)} 
+                                    className="ml-4 text-light-3 hover:text-red-500 hover:bg-red-500/10 p-2 rounded-full flex-shrink-0 transition-colors"
+                                    aria-label="Delete post"
+                                >
+                                   <DeleteIcon />
+                                </button>
+                            </div>
+                            {post.imageUrl && (
+                                <div className="mt-3" style={{ paddingLeft: '3.25rem' }}> {/* Corresponds to w-10 + space-x-3 */}
+                                    <img src={post.imageUrl} alt="Post content" className="rounded-lg max-h-48 w-auto object-cover" />
+                                </div>
+                            )}
                         </div>
-                        <button onClick={() => removePost(post.id)} className="ml-4 text-light-3 hover:text-red-500 p-2 rounded-full flex-shrink-0">
-                           <DeleteIcon />
-                        </button>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
       </div>

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import PostCard from './PostCard';
 import ProfileHeader from './ProfileHeader';
 import MessagingView from './MessagingView';
 import { usePlatformData } from '../hooks/usePlatformData';
 import { User, Creator } from '../types';
+import BottomNav from './BottomNav';
 
 interface FanViewProps {
   currentUser: User;
@@ -186,9 +187,10 @@ const FanView: React.FC<FanViewProps> = ({ currentUser, setCurrentUser, navigati
 
   return (
     <>
-      <main className="container mx-auto py-6 px-4 md:px-0 pb-24 md:pb-6">
+      <main className={`container mx-auto ${view === 'messages' ? 'h-[calc(100vh-8rem-1rem)] md:h-[calc(100vh-4rem-3rem)] p-0' : 'py-6 px-4 md:px-0 pb-24 md:pb-6'}`}>
         {renderContent()}
       </main>
+      <BottomNav role={currentUser.role} activeView={view} onNavigate={onNavigate} />
     </>
   );
 };
