@@ -7,10 +7,11 @@ import { User, UserRole } from '../types';
 interface HeaderProps {
     currentUser: User;
     switchUser: (role: UserRole) => void;
-    onNavigate: (view: string) => void;
+    onNavigate: (view: string, params?: any) => void;
+    unreadMessages: number;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentUser, switchUser, onNavigate }) => {
+const Header: React.FC<HeaderProps> = ({ currentUser, switchUser, onNavigate, unreadMessages }) => {
   const role = currentUser.role;
 
   const FanNav = () => (
@@ -23,9 +24,14 @@ const Header: React.FC<HeaderProps> = ({ currentUser, switchUser, onNavigate }) 
         <DiscoverIcon/>
         <span>Discover</span>
       </button>
-      <button onClick={() => onNavigate('messages')} className="flex items-center space-x-2 text-light-2 hover:text-brand-primary transition-colors">
+      <button onClick={() => onNavigate('messages')} className="relative flex items-center space-x-2 text-light-2 hover:text-brand-primary transition-colors">
         <MessagesIcon/>
         <span>Messages</span>
+        {unreadMessages > 0 && (
+            <span className="absolute -top-1 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                {unreadMessages > 9 ? '9+' : unreadMessages}
+            </span>
+        )}
       </button>
     </>
   );
@@ -36,9 +42,14 @@ const Header: React.FC<HeaderProps> = ({ currentUser, switchUser, onNavigate }) 
           <DashboardIcon/>
           <span>Dashboard</span>
         </button>
-         <button onClick={() => onNavigate('messages')} className="flex items-center space-x-2 text-light-2 hover:text-brand-primary transition-colors">
+         <button onClick={() => onNavigate('messages')} className="relative flex items-center space-x-2 text-light-2 hover:text-brand-primary transition-colors">
             <MessagesIcon/>
             <span>Messages</span>
+             {unreadMessages > 0 && (
+                <span className="absolute -top-1 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                    {unreadMessages > 9 ? '9+' : unreadMessages}
+                </span>
+            )}
         </button>
         <button onClick={() => onNavigate('settings')} className="flex items-center space-x-2 text-light-2 hover:text-brand-primary transition-colors">
             <SettingsIcon/>
@@ -71,7 +82,9 @@ const Header: React.FC<HeaderProps> = ({ currentUser, switchUser, onNavigate }) 
                 {role === 'admin' && <AdminNav />}
             </nav>
             <RoleSwitcher currentRole={role} onSwitch={switchUser} />
-            <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-10 h-10 rounded-full border-2 border-dark-3"/>
+            <button onClick={() => onNavigate('profile', { userId: currentUser.id })} className="transition-transform hover:scale-105">
+              <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-10 h-10 rounded-full border-2 border-dark-3"/>
+            </button>
           </div>
         </div>
       </div>

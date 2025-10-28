@@ -1,5 +1,7 @@
 {
   "name": "CreatorHub",
   "description": "An exclusive, private platform designed for top-tier creators to foster a more intimate connection with their fans. Features role-based views for Fans, Creators, and Admins, with private access codes for subscriptions, creator dashboards, and admin oversight capabilities.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }

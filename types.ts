@@ -6,6 +6,7 @@ export interface User {
   avatarUrl: string;
   role: UserRole;
   subscribedTo: string[]; // Array of creator IDs
+  bio?: string;
 }
 
 export interface Creator {
@@ -15,8 +16,6 @@ export interface Creator {
   bio: string;
   avatarUrl: string;
   bannerUrl: string;
-  subscriptionPrice: number;
-  accessCode: string;
   isVerified: boolean;
 }
 

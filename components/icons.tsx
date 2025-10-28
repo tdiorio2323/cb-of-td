@@ -1,4 +1,5 @@
-import { Home, Compass, MessageSquare, PlusSquare, User, Heart, X, Image as ImageIcon, Send, ThumbsUp, MessageCircle, LayoutDashboard, Settings, ShieldCheck, ShieldOff, Trash2, DollarSign, LogOut, CheckCircle2, ArrowLeft } from 'lucide-react';
+
+import { Home, Compass, MessageSquare, PlusSquare, User, Heart, X, Image as ImageIcon, Send, ThumbsUp, MessageCircle, LayoutDashboard, Settings, ShieldCheck, ShieldOff, Trash2, DollarSign, LogOut, CheckCircle2, ArrowLeft, Sparkles, Mic, MicOff } from 'lucide-react';
 
 export const HomeIcon = () => <Home className="w-6 h-6" />;
 export const DiscoverIcon = () => <Compass className="w-6 h-6" />;
@@ -22,3 +23,6 @@ export const TipIcon = () => <DollarSign className="w-5 h-5" />;
 export const LogoutIcon = () => <LogOut className="w-6 h-6" />;
 export const CheckIcon = () => <CheckCircle2 className="w-5 h-5" />;
 export const ArrowLeftIcon = () => <ArrowLeft className="w-6 h-6" />;
+export const SparklesIcon = () => <Sparkles className="w-5 h-5" />;
+export const MicIcon = () => <Mic className="w-5 h-5" />;
+export const MicOffIcon = () => <MicOff className="w-5 h-5" />;

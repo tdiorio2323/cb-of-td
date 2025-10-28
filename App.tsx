@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Header from './components/Header';
 import { useAuth } from './hooks/useAuth';
 import { UserRole } from './types';
+import { usePlatformData } from './hooks/usePlatformData';
 
 // Role-specific view components
 import FanView from './components/FanView';
@@ -18,25 +19,21 @@ const getDefaultViewForRole = (role: UserRole) => {
 }
 
 const App: React.FC = () => {
-  const { currentUser, setCurrentUser, switchUser: switchAuthUser } = useAuth();
-  const [view, setView] = useState(getDefaultViewForRole(currentUser.role));
-  const [activeConversationUserId, setActiveConversationUserId] = useState<string | null>(null);
-
-  const handleNavigation = (newView: string) => {
-    setView(newView);
-    setActiveConversationUserId(null); // Reset active chat when navigating away
-  }
+  const { currentUser, setCurrentUser, switchUser } = useAuth();
+  const [navigation, setNavigation] = useState({ view: getDefaultViewForRole(currentUser.role), params: {} });
   
-  const handleStartChat = (userId: string) => {
-    setView('messages');
-    setActiveConversationUserId(userId);
+  const platformData = usePlatformData();
+
+  const handleNavigation = (view: string, params = {}) => {
+    setNavigation({ view, params });
   }
 
   const handleSwitchUser = (role: UserRole) => {
-      switchAuthUser(role);
-      setView(getDefaultViewForRole(role));
-      setActiveConversationUserId(null);
+      switchUser(role);
+      handleNavigation(getDefaultViewForRole(role));
   }
+  
+  const unreadMessagesCount = platformData.getTotalUnreadCount(currentUser.id);
 
   const renderAppForRole = () => {
     switch (currentUser.role) {
@@ -44,31 +41,34 @@ const App: React.FC = () => {
         return <FanView 
                     currentUser={currentUser} 
                     setCurrentUser={setCurrentUser}
-                    view={view}
-                    setView={setView}
-                    onStartChat={handleStartChat}
-                    activeConversationUserId={activeConversationUserId}
+                    navigation={navigation}
+                    onNavigate={handleNavigation}
+                    platformData={platformData}
                 />;
       case 'creator':
         return <CreatorView 
                     currentUser={currentUser}
-                    view={view}
-                    setView={setView}
-                    activeConversationUserId={activeConversationUserId}
+                    navigation={navigation}
+                    onNavigate={handleNavigation}
+                    platformData={platformData}
                 />;
       case 'admin':
-        return <AdminView currentUser={currentUser} />;
+        return <AdminView 
+                    currentUser={currentUser} 
+                    platformData={platformData} 
+                />;
       default:
         return <div>Error: Unknown user role.</div>;
     }
   };
 
   return (
-    <div className="min-h-screen bg-dark-1 font-sans">
+    <div className="min-h-screen bg-transparent font-sans">
       <Header 
         currentUser={currentUser} 
         switchUser={handleSwitchUser}
         onNavigate={handleNavigation}
+        unreadMessages={unreadMessagesCount}
       />
       {renderAppForRole()}
     </div>

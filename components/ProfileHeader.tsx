@@ -5,28 +5,29 @@ import { CheckIcon, MessagesIcon } from './icons';
 interface ProfileHeaderProps {
   creator: Creator;
   postCount: number;
-  isSubscribed: boolean;
+  followerCount: number;
+  isFollowing: boolean;
   isOwnProfile: boolean;
-  onSubscribeClick: () => void;
-  onUnsubscribe: (creatorId: string) => void;
+  onFollowClick: () => void;
+  onUnfollow: (creatorId: string) => void;
   onEditProfile: () => void;
   onMessageClick: () => void;
 }
 
-const ProfileHeader: React.FC<ProfileHeaderProps> = ({ creator, postCount, isSubscribed, isOwnProfile, onSubscribeClick, onUnsubscribe, onEditProfile, onMessageClick }) => {
+const ProfileHeader: React.FC<ProfileHeaderProps> = ({ creator, postCount, followerCount, isFollowing, isOwnProfile, onFollowClick, onUnfollow, onEditProfile, onMessageClick }) => {
   
   const renderButtons = () => {
     if (isOwnProfile) {
         return (
              <button 
                 onClick={onEditProfile}
-                className='bg-dark-3 text-light-2 px-6 py-2 rounded-full font-semibold transition-colors hover:bg-dark-3/80'
+                className='bg-dark-3 text-light-2 px-6 py-2 rounded-full font-semibold transition-colors hover:bg-dark-1'
             >
                 Edit Profile
             </button>
         )
     }
-    if (isSubscribed) {
+    if (isFollowing) {
         return (
             <div className="flex items-center space-x-2">
                  <button 
@@ -36,21 +37,21 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ creator, postCount, isSub
                     <MessagesIcon />
                 </button>
                 <button 
-                    onClick={() => onUnsubscribe(creator.id)}
+                    onClick={() => onUnfollow(creator.id)}
                     className='bg-dark-3 text-light-2 px-6 py-2 rounded-full font-semibold transition-colors hover:bg-red-500/20 hover:text-red-400 group flex items-center space-x-2'
                 >
-                    <span className="group-hover:hidden flex items-center space-x-2"><CheckIcon/><span>Subscribed</span></span>
-                    <span className="hidden group-hover:block">Unsubscribe</span>
+                    <span className="group-hover:hidden flex items-center space-x-2"><CheckIcon/><span>Following</span></span>
+                    <span className="hidden group-hover:block">Unfollow</span>
                 </button>
             </div>
         )
     }
     return (
         <button 
-            onClick={onSubscribeClick}
+            onClick={onFollowClick}
             className={`px-6 py-2 rounded-full font-semibold transition-all duration-300 bg-brand-primary text-dark-1 hover:bg-brand-secondary`}
         >
-            {`Subscribe for $${creator.subscriptionPrice}/mo`}
+            Follow
         </button>
     )
   }
@@ -74,7 +75,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ creator, postCount, isSub
         <p className="mt-4 text-light-2">{creator.bio}</p>
         <div className="mt-4 flex space-x-6 text-sm">
             <p><span className="font-bold">{postCount}</span> <span className="text-light-3">Posts</span></p>
-            <p><span className="font-bold">1.2M</span> <span className="text-light-3">Fans</span></p>
+            <p><span className="font-bold">{followerCount.toLocaleString()}</span> <span className="text-light-3">Followers</span></p>
         </div>
       </div>
     </div>

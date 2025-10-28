@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { User } from '../types';
 import { usePlatformData } from '../hooks/usePlatformData';
@@ -6,9 +7,10 @@ import PostCard from './PostCard';
 
 interface AdminViewProps {
   currentUser: User;
+  platformData: ReturnType<typeof usePlatformData>;
 }
 
-const AdminView: React.FC<AdminViewProps> = ({ currentUser }) => {
+const AdminView: React.FC<AdminViewProps> = ({ currentUser, platformData }) => {
   const { 
     creators, 
     posts,
@@ -16,7 +18,7 @@ const AdminView: React.FC<AdminViewProps> = ({ currentUser }) => {
     toggleCreatorVerification,
     removePost,
     getCreatorById,
-    } = usePlatformData();
+    } = platformData;
 
   return (
     <main className="container mx-auto py-6 px-4">

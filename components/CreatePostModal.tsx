@@ -1,7 +1,9 @@
 
+
 import React, { useState, useRef } from 'react';
 import { Creator } from '../types';
-import { CloseIcon, AddImageIcon } from './icons';
+import { CloseIcon, AddImageIcon, SparklesIcon } from './icons';
+import { generatePostDraft } from '../services/geminiService';
 
 interface CreatePostModalProps {
   isOpen: boolean;
@@ -15,6 +17,9 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onSu
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [showAiPrompt, setShowAiPrompt] = useState(false);
 
   if (!isOpen) return null;
 
@@ -31,8 +36,6 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onSu
   };
 
   const handleSubmit = () => {
-    // In a real app, you would upload imageFile to a server and get a URL.
-    // For this demo, we'll just use the local preview URL.
     onSubmit(text, imagePreview || undefined);
     setText('');
     setImagePreview(null);
@@ -45,6 +48,16 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onSu
         onClose();
     }
   }
+  
+  const handleGeneratePost = async () => {
+    if (!aiPrompt.trim()) return;
+    setIsGenerating(true);
+    const draft = await generatePostDraft(aiPrompt);
+    setText(draft);
+    setIsGenerating(false);
+    setShowAiPrompt(false);
+    setAiPrompt('');
+  };
 
   return (
     <div 
@@ -73,10 +86,33 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onSu
             </button>
           </div>
         )}
+         {showAiPrompt && (
+          <div className="mt-4 space-y-2 animate-fade-in-up">
+            <textarea
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                placeholder="e.g., A post about my upcoming trip to Japan..."
+                className="w-full bg-dark-3 p-3 rounded-lg text-light-1 focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                rows={2}
+            />
+            <button
+                onClick={handleGeneratePost}
+                disabled={isGenerating || !aiPrompt.trim()}
+                className="w-full bg-dark-3 text-brand-primary font-bold py-2 px-4 rounded-full disabled:opacity-50 transition-colors hover:bg-dark-1"
+            >
+              {isGenerating ? 'Generating...' : 'Generate with AI'}
+            </button>
+          </div>
+        )}
         <div className="mt-4 flex justify-between items-center">
-          <button onClick={() => fileInputRef.current?.click()} className="text-brand-primary hover:text-brand-secondary">
-            <AddImageIcon />
-          </button>
+            <div className="flex items-center space-x-2">
+                 <button onClick={() => fileInputRef.current?.click()} className="text-brand-primary hover:text-brand-secondary p-2 rounded-full hover:bg-dark-3 transition-colors">
+                    <AddImageIcon />
+                </button>
+                 <button onClick={() => setShowAiPrompt(!showAiPrompt)} className="text-brand-primary hover:text-brand-secondary p-2 rounded-full hover:bg-dark-3 transition-colors">
+                    <SparklesIcon />
+                </button>
+            </div>
           <input
             type="file"
             ref={fileInputRef}

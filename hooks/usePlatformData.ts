@@ -4,7 +4,7 @@ import { Creator, Post, User, Message } from '../types';
 // --- MOCK DATABASE ---
 
 const USERS_DB: User[] = [
-    { id: 'user-fan-1', name: 'Brenda Fan', avatarUrl: 'https://picsum.photos/seed/brenda/200/200', role: 'fan', subscribedTo: ['creator-2', 'creator-1'] },
+    { id: 'user-fan-1', name: 'Brenda Fan', avatarUrl: 'https://picsum.photos/seed/brenda/200/200', role: 'fan', subscribedTo: ['creator-2', 'creator-1'], bio: 'Just a fan enjoying the great content here! My favorite creators are Chef Marco and Elena Voyage.' },
     { id: 'user-creator-1', name: 'Alex Codes', avatarUrl: 'https://picsum.photos/seed/alex/200/200', role: 'creator', subscribedTo: [] },
     { id: 'user-admin-1', name: 'Admin', avatarUrl: 'https://picsum.photos/seed/admin/200/200', role: 'admin', subscribedTo: [] },
 ];
@@ -17,8 +17,6 @@ const CREATORS_DB: Creator[] = [
     bio: 'Exploring the world one photo at a time. Join my journey for exclusive travel content and behind-the-scenes stories.',
     avatarUrl: 'https://picsum.photos/seed/elena/200/200',
     bannerUrl: 'https://picsum.photos/seed/elenabanner/1200/400',
-    subscriptionPrice: 15,
-    accessCode: 'TRAVEL24',
     isVerified: true,
   },
   {
@@ -28,8 +26,6 @@ const CREATORS_DB: Creator[] = [
     bio: 'Gourmet recipes made simple. Sub for weekly cooking classes, secret ingredients, and mouth-watering food photography.',
     avatarUrl: 'https://picsum.photos/seed/marco/200/200',
     bannerUrl: 'https://picsum.photos/seed/marcobanner/1200/400',
-    subscriptionPrice: 20,
-    accessCode: 'FOODIE',
     isVerified: true,
   },
   {
@@ -39,8 +35,6 @@ const CREATORS_DB: Creator[] = [
     bio: 'Your daily dose of mindfulness and movement. Access to my full library of yoga classes, meditation guides, and wellness tips.',
     avatarUrl: 'https://picsum.photos/seed/yoga/200/200',
     bannerUrl: 'https://picsum.photos/seed/yogabanner/1200/400',
-    subscriptionPrice: 10,
-    accessCode: 'NAMASTE',
     isVerified: false,
   },
   {
@@ -50,8 +44,6 @@ const CREATORS_DB: Creator[] = [
     bio: 'Building the future, one line of code at a time. Follow for tutorials, project deep-dives, and career advice in tech.',
     avatarUrl: 'https://picsum.photos/seed/alex/200/200',
     bannerUrl: 'https://picsum.photos/seed/alexbanner/1200/400',
-    subscriptionPrice: 25,
-    accessCode: 'DEVLIFE',
     isVerified: true,
   },
 ];
@@ -109,29 +101,41 @@ export const usePlatformData = () => {
   const [creators, setCreators] = useState<Creator[]>(CREATORS_DB);
   const [posts, setPosts] = useState<Post[]>(POSTS_DB);
   const [messages, setMessages] = useState<Message[]>(MESSAGES_DB);
+  const [typingStatus, setTypingStatus] = useState<Record<string, boolean>>({});
 
-  // Real-time message simulator
+  // Real-time message and typing simulator
   useEffect(() => {
     const intervalId = setInterval(() => {
-      setMessages(prevMessages => {
-        const fan = users.find(u => u.role === 'fan');
-        if (!fan || fan.subscribedTo.length === 0) return prevMessages;
+      // Simulate receiving a message
+      const fan = users.find(u => u.role === 'fan');
+      if (!fan || fan.subscribedTo.length === 0) return;
 
-        const randomCreatorId = fan.subscribedTo[Math.floor(Math.random() * fan.subscribedTo.length)];
-        const creator = creators.find(c => c.id === randomCreatorId);
-        if (!creator) return prevMessages;
+      const randomCreatorId = fan.subscribedTo[Math.floor(Math.random() * fan.subscribedTo.length)];
+      const creator = creators.find(c => c.id === randomCreatorId);
+      if (!creator) return;
+      
+      const newText = `This is a new message from ${creator.name}! ${Date.now()}`;
+      
+      // Simulate typing indicator before message arrives
+      setTypingStatus(prev => ({ ...prev, [creator.id]: true }));
+      
+      setTimeout(() => {
+         setMessages(prevMessages => {
+            const newMessage: Message = {
+              id: `m${Date.now()}`,
+              fromId: randomCreatorId,
+              toId: fan.id,
+              text: newText,
+              timestamp: new Date().toISOString(),
+              isRead: false,
+            };
+            return [newMessage, ...prevMessages];
+         });
+         setTypingStatus(prev => ({ ...prev, [creator.id]: false }));
+      }, Math.random() * 2000 + 1000); // Typing time between 1-3 seconds
 
-        const newMessage: Message = {
-          id: `m${Date.now()}`,
-          fromId: randomCreatorId,
-          toId: fan.id,
-          text: `This is a new message from ${creator.name}!`,
-          timestamp: new Date().toISOString(),
-          isRead: false,
-        };
-        return [newMessage, ...prevMessages];
-      });
-    }, 8000); // Add a new message every 8 seconds
+
+    }, 12000); // New message arrives every 12 seconds
 
     return () => clearInterval(intervalId); // Cleanup on unmount
   }, [users, creators]);
@@ -141,19 +145,16 @@ export const usePlatformData = () => {
       if(user?.role !== 'creator') return undefined;
       return creators.find(c => c.name === user.name);
   }, [users, creators]);
+  
+  const followCreator = useCallback((userId: string, creatorId: string) => {
+    setUsers(prevUsers => prevUsers.map(user => 
+        user.id === userId && !user.subscribedTo.includes(creatorId)
+        ? { ...user, subscribedTo: [...user.subscribedTo, creatorId] } 
+        : user
+    ));
+  }, []);
 
-  const subscribeWithCode = useCallback((userId: string, creatorId: string, code: string): boolean => {
-    const creator = creators.find(c => c.id === creatorId);
-    if (creator && creator.accessCode.toUpperCase() === code.toUpperCase()) {
-        setUsers(prevUsers => prevUsers.map(user => 
-            user.id === userId ? { ...user, subscribedTo: [...user.subscribedTo, creatorId] } : user
-        ));
-        return true;
-    }
-    return false;
-  }, [creators]);
-
-  const unsubscribe = useCallback((userId: string, creatorId: string) => {
+  const unfollowCreator = useCallback((userId: string, creatorId: string) => {
     setUsers(prevUsers => prevUsers.map(user => 
         user.id === userId ? { ...user, subscribedTo: user.subscribedTo.filter(id => id !== creatorId) } : user
     ));
@@ -175,6 +176,11 @@ export const usePlatformData = () => {
   const getSubscribedPosts = useCallback((currentUser: User) => {
     return posts.filter(p => currentUser.subscribedTo.includes(p.creatorId)).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [posts]);
+  
+  const getFollowerCount = useCallback((creatorId: string) => {
+    return users.filter(user => user.subscribedTo.includes(creatorId)).length;
+  }, [users]);
+
 
   // Admin functions
   const toggleCreatorVerification = useCallback((creatorId: string) => {
@@ -185,10 +191,6 @@ export const usePlatformData = () => {
       setPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
   
-  const updateCreatorAccessCode = useCallback((creatorId: string, newCode: string) => {
-    setCreators(prev => prev.map(c => c.id === creatorId ? {...c, accessCode: newCode} : c));
-  }, []);
-
   // --- Messaging Functions ---
 
   const allUsersMap = useMemo(() => {
@@ -199,7 +201,8 @@ export const usePlatformData = () => {
     creatorUsers.forEach(cu => {
         const creatorProfile = creators.find(c => c.name === cu.name);
         if (creatorProfile) {
-            map.set(creatorProfile.id, { ...creatorProfile, ...cu });
+            // Merge User and Creator properties, giving Creator precedence for shared keys
+            map.set(creatorProfile.id, { ...cu, ...creatorProfile });
         }
     });
 
@@ -253,6 +256,12 @@ export const usePlatformData = () => {
     });
     return counts;
   }, [messages]);
+  
+  const getTotalUnreadCount = useCallback((userId: string): number => {
+      const counts = getUnreadMessageCounts(userId);
+      // FIX: Cast Object.values(counts) to number[] to resolve incorrect type inference that caused an "unknown is not assignable to number" error.
+      return (Object.values(counts) as number[]).reduce((total, count) => total + count, 0);
+  }, [getUnreadMessageCounts]);
 
   const markMessagesAsRead = useCallback((userId: string, otherUserId: string) => {
     setMessages(prevMessages => 
@@ -266,11 +275,12 @@ export const usePlatformData = () => {
 
 
   return { 
-    users, creators, posts, messages, 
+    users, creators, posts, messages, typingStatus,
     getCreatorById, getPostsByCreatorId, getSubscribedPosts,
-    subscribeWithCode, unsubscribe, addPost, getCreatorByUserId,
-    toggleCreatorVerification, removePost, updateCreatorAccessCode,
+    followCreator, unfollowCreator, getFollowerCount,
+    addPost, getCreatorByUserId,
+    toggleCreatorVerification, removePost,
     // Messaging
-    allUsersMap, getConversations, getMessages, sendMessage, getUnreadMessageCounts, markMessagesAsRead,
+    allUsersMap, getConversations, getMessages, sendMessage, getUnreadMessageCounts, markMessagesAsRead, getTotalUnreadCount,
   };
 };
