@@ -35,8 +35,8 @@ const CreatorView: React.FC<CreatorViewProps> = ({ currentUser, navigation, onNa
     return <div className="text-center p-8">Could not load creator profile.</div>;
   }
   
-  const handleAddPost = (text: string, imageUrl?: string) => {
-    addPost(creatorProfile.id, text, imageUrl);
+  const handleAddPost = (text: string, imageUrl: string | undefined, isPrivate: boolean) => {
+    addPost(creatorProfile.id, text, imageUrl, isPrivate);
   };
   
   const handleCreatorClick = (creatorId: string) => {
@@ -72,10 +72,25 @@ const CreatorView: React.FC<CreatorViewProps> = ({ currentUser, navigation, onNa
   
   const SettingsPage: React.FC<{creator: Creator}> = ({ creator }) => {
     const [bio, setBio] = useState(creator.bio);
+    const [price, setPrice] = useState(creator.subscriptionPrice.toString());
+    const [accessCode, setAccessCode] = useState(creator.accessCode);
     const maxChars = 300;
 
     const handleSave = () => {
-        updateCreatorProfile(creator.id, { bio });
+        const priceNum = parseFloat(price);
+        if (isNaN(priceNum) || priceNum < 0) {
+            alert("Please enter a valid, non-negative price.");
+            return;
+        }
+        if (!accessCode.trim()) {
+            alert("Access code cannot be empty.");
+            return;
+        }
+        updateCreatorProfile(creator.id, { 
+            bio, 
+            subscriptionPrice: priceNum, 
+            accessCode: accessCode.trim().toUpperCase() 
+        });
         alert("Profile saved!");
     };
 
@@ -113,7 +128,39 @@ const CreatorView: React.FC<CreatorViewProps> = ({ currentUser, navigation, onNa
                     <h3 className="text-sm font-medium text-light-3 mb-2">Live Preview</h3>
                     <div className="prose prose-invert bg-dark-3 p-4 rounded-lg min-h-[100px] text-light-2 max-w-none" dangerouslySetInnerHTML={parseMarkdown(bio)} />
                 </div>
-                 <div className="flex justify-end">
+                
+                 <div className="border-t border-dark-3 pt-6">
+                    <h2 className="text-lg font-semibold mb-4">Subscription Settings</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label htmlFor="price" className="block text-sm font-medium text-light-3 mb-2">Monthly Price ($)</label>
+                             <input
+                                type="number"
+                                id="price"
+                                value={price}
+                                onChange={(e) => setPrice(e.target.value)}
+                                min="0"
+                                step="0.01"
+                                className="w-full bg-dark-3 p-3 rounded-lg text-light-1 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                placeholder="e.g., 5.00"
+                            />
+                        </div>
+                        <div>
+                             <label htmlFor="code" className="block text-sm font-medium text-light-3 mb-2">Access Code</label>
+                             <input
+                                type="text"
+                                id="code"
+                                value={accessCode}
+                                onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+                                className="w-full bg-dark-3 p-3 rounded-lg text-light-1 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                                placeholder="e.g., SECRET"
+                            />
+                        </div>
+                    </div>
+                    <p className="text-xs text-light-3 mt-2">Fans will need this code to subscribe to your content.</p>
+                </div>
+
+                 <div className="flex justify-end pt-4">
                     <button onClick={handleSave} className="bg-brand-primary text-dark-1 font-bold py-2 px-6 rounded-full transition-colors hover:bg-brand-secondary">
                         Save Changes
                     </button>

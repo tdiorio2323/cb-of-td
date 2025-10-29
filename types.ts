@@ -17,6 +17,8 @@ export interface Creator {
   avatarUrl: string;
   bannerUrl: string;
   isVerified: boolean;
+  subscriptionPrice: number;
+  accessCode: string;
 }
 
 export interface Post {
@@ -28,6 +30,7 @@ export interface Post {
   likes: number;
   comments: number;
   tips: number; // Added tips
+  isPrivate: boolean;
 }
 
 export interface Message {
@@ -37,4 +40,5 @@ export interface Message {
     text: string;
     timestamp: string;
     isRead: boolean;
+    status: 'sending' | 'sent' | 'failed';
 }

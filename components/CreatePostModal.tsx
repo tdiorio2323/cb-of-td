@@ -8,7 +8,7 @@ import { generatePostDraft } from '../services/geminiService';
 interface CreatePostModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (text: string, imageUrl?: string) => void;
+  onSubmit: (text: string, imageUrl: string | undefined, isPrivate: boolean) => void;
   creator: Creator;
 }
 
@@ -16,6 +16,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onSu
   const [text, setText] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
@@ -36,10 +37,11 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onSu
   };
 
   const handleSubmit = () => {
-    onSubmit(text, imagePreview || undefined);
+    onSubmit(text, imagePreview || undefined, isPrivate);
     setText('');
     setImagePreview(null);
     setImageFile(null);
+    setIsPrivate(false);
     onClose();
   };
   
@@ -105,13 +107,21 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onSu
           </div>
         )}
         <div className="mt-4 flex justify-between items-center">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-4">
                  <button onClick={() => fileInputRef.current?.click()} className="text-brand-primary hover:text-brand-secondary p-2 rounded-full hover:bg-dark-3 transition-colors">
                     <AddImageIcon />
                 </button>
                  <button onClick={() => setShowAiPrompt(!showAiPrompt)} className="text-brand-primary hover:text-brand-secondary p-2 rounded-full hover:bg-dark-3 transition-colors">
                     <SparklesIcon />
                 </button>
+                <label htmlFor="private-toggle" className="flex items-center cursor-pointer select-none">
+                    <div className="relative">
+                        <input type="checkbox" id="private-toggle" className="sr-only" checked={isPrivate} onChange={() => setIsPrivate(!isPrivate)} />
+                        <div className={`w-12 h-6 rounded-full shadow-inner transition-colors ${isPrivate ? 'bg-brand-primary' : 'bg-dark-3'}`}></div>
+                        <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform transform ${isPrivate ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                    </div>
+                    <span className="ml-3 text-light-2 text-sm">Subscribers Only</span>
+                </label>
             </div>
           <input
             type="file"

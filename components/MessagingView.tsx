@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react';
 import { User, Message, Creator } from '../types';
 import { usePlatformData } from '../hooks/usePlatformData';
-import { SendIcon, ArrowLeftIcon, MicIcon, MicOffIcon, SparklesIcon } from './icons';
+import { SendIcon, ArrowLeftIcon, MicIcon, MicOffIcon, SparklesIcon, SendingIcon, SentIcon, FailedIcon } from './icons';
 import { GoogleGenAI, LiveServerMessage, Modality, Blob, LiveSession } from "@google/genai";
 import { generateSuggestedReplies } from '../services/geminiService';
 
@@ -35,7 +35,7 @@ interface MessagingViewProps {
 }
 
 const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, initialConversationUserId, platformData, onNavigate }) => {
-  const { allUsersMap, getConversations, getMessages, sendMessage, getUnreadMessageCounts, markMessagesAsRead, typingStatus } = platformData;
+  const { allUsersMap, getConversations, getMessagesPaginated, sendMessage, getUnreadMessageCounts, markMessagesAsRead, typingStatus } = platformData;
   
   const [activeConversationUserId, setActiveConversationUserId] = useState<string | null>(initialConversationUserId);
   const [messageText, setMessageText] = useState('');
@@ -43,7 +43,14 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, initialConve
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   
+  const [displayedMessages, setDisplayedMessages] = useState<Message[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const prevScrollHeightRef = useRef<number | null>(null);
   const sessionPromiseRef = useRef<Promise<LiveSession> | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
@@ -51,7 +58,6 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, initialConve
 
   const conversations = getConversations(currentUser.id);
   const unreadCounts = getUnreadMessageCounts(currentUser.id);
-  const activeMessages = activeConversationUserId ? getMessages(currentUser.id, activeConversationUserId) : [];
   const activeConversationUser = activeConversationUserId ? allUsersMap.get(activeConversationUserId) : null;
   const isOtherUserTyping = activeConversationUserId ? typingStatus[activeConversationUserId] : false;
   
@@ -67,8 +73,32 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, initialConve
   }, [initialConversationUserId, conversations, currentUser.id, activeConversationUserId]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeMessages, isOtherUserTyping]);
+    const fetchMessages = () => {
+        if (!activeConversationUserId) return;
+        // Reset state for new conversation
+        setIsLoadingMore(true);
+        setDisplayedMessages([]);
+        setCurrentPage(1);
+        setHasMore(false);
+        const { messages: initialMessages, hasMore: initialHasMore } = getMessagesPaginated(currentUser.id, activeConversationUserId, 1);
+        setDisplayedMessages(initialMessages);
+        setHasMore(initialHasMore);
+        setIsLoadingMore(false);
+    };
+    fetchMessages();
+  }, [activeConversationUserId, currentUser.id, getMessagesPaginated]);
+
+
+  useLayoutEffect(() => {
+    if (isLoadingMore && chatContainerRef.current && prevScrollHeightRef.current !== null) {
+        const newScrollHeight = chatContainerRef.current.scrollHeight;
+        chatContainerRef.current.scrollTop = newScrollHeight - prevScrollHeightRef.current;
+        prevScrollHeightRef.current = null; 
+    } else if (!isLoadingMore) {
+        messagesEndRef.current?.scrollIntoView();
+    }
+  }, [displayedMessages, isLoadingMore]);
+
 
   useEffect(() => {
     if (activeConversationUserId) {
@@ -81,16 +111,16 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, initialConve
 
   useEffect(() => {
     const fetchSuggestions = async () => {
-        if (activeMessages.length > 0 && activeMessages[activeMessages.length-1].fromId !== currentUser.id) {
+        if (displayedMessages.length > 0 && displayedMessages[displayedMessages.length-1].fromId !== currentUser.id) {
             setIsLoadingSuggestions(true);
             setSuggestions([]);
-            const replies = await generateSuggestedReplies(activeMessages, currentUser.id);
+            const replies = await generateSuggestedReplies(displayedMessages, currentUser.id);
             setSuggestions(replies);
             setIsLoadingSuggestions(false);
         }
     };
     fetchSuggestions();
-  }, [activeMessages, currentUser.id]);
+  }, [displayedMessages, currentUser.id]);
 
   useEffect(() => {
     setSuggestions([]);
@@ -195,6 +225,24 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, initialConve
     setMessageText(suggestion);
     setSuggestions([]);
   }
+  
+  const handleLoadMore = () => {
+    if (!activeConversationUserId || isLoadingMore || !hasMore) return;
+
+    setIsLoadingMore(true);
+
+    if (chatContainerRef.current) {
+        prevScrollHeightRef.current = chatContainerRef.current.scrollHeight;
+    }
+
+    const nextPage = currentPage + 1;
+    const { messages: newMessages, hasMore: newHasMore } = getMessagesPaginated(currentUser.id, activeConversationUserId, nextPage);
+
+    setDisplayedMessages(prev => [...newMessages, ...prev]);
+    setHasMore(newHasMore);
+    setCurrentPage(nextPage);
+    // isLoadingMore is set to false in useLayoutEffect after scroll position is adjusted
+  };
 
   // --- Render Functions ---
 
@@ -242,11 +290,11 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, initialConve
               <img src={otherParty.avatarUrl} alt={otherParty.name} className="w-12 h-12 rounded-full" />
               <div className="flex-grow overflow-hidden">
                 <div className="flex justify-between items-center">
-                  <h3 className={`font-bold truncate ${hasUnread ? 'text-light-1' : ''}`}>{otherParty.name}</h3>
-                  <p className="text-xs text-light-3 flex-shrink-0">{timeAgo(convo.timestamp)}</p>
+                  <h3 className={`font-bold truncate ${hasUnread ? 'text-light-1' : 'text-light-2'}`}>{otherParty.name}</h3>
+                  <p className={`text-xs flex-shrink-0 ${hasUnread ? 'font-bold text-brand-primary' : 'text-light-3'}`}>{timeAgo(convo.timestamp)}</p>
                 </div>
                 <div className="flex justify-between items-start mt-1">
-                    <p className={`text-sm pr-2 ${hasUnread ? 'text-light-2' : 'text-light-3'} truncate`}>{convo.text}</p>
+                    <p className={`text-sm pr-2 truncate ${hasUnread ? 'font-bold text-light-2' : 'text-light-3'}`}>{convo.text}</p>
                     {hasUnread && (
                         <span className="bg-brand-primary text-dark-1 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
                             {unreadCount}
@@ -261,83 +309,129 @@ const MessagingView: React.FC<MessagingViewProps> = ({ currentUser, initialConve
     </div>
   );
 
-  const ChatWindow = () => (
-    <div className={`w-full md:w-2/3 lg:w-3/4 flex flex-col bg-dark-1 ${!activeConversationUserId ? 'hidden md:flex' : 'flex'}`}>
-      {activeConversationUser ? (
-        <>
-          <div className="p-4 border-b border-dark-3 flex items-center space-x-4">
-             <button className="md:hidden text-light-2" onClick={() => setActiveConversationUserId(null)}>
-                <ArrowLeftIcon />
-            </button>
-            <button className="flex items-center space-x-4 group" onClick={() => onNavigate('profile', { userId: activeConversationUser.id })}>
-                <img src={activeConversationUser.avatarUrl} alt={activeConversationUser.name} className="w-10 h-10 rounded-full" />
-                <div>
-                  <h3 className="font-bold group-hover:text-brand-primary transition-colors">{activeConversationUser.name}</h3>
-                  { (activeConversationUser as Creator).handle && <p className="text-sm text-light-3 text-left">@{(activeConversationUser as Creator).handle}</p>}
-                </div>
-            </button>
-          </div>
-          <div className="flex-grow p-4 overflow-y-auto">
-            <div className="flex flex-col space-y-1">
-              {activeMessages.map(msg => (
-                <div key={msg.id} className={`flex flex-col ${msg.fromId === currentUser.id ? 'items-end' : 'items-start'}`}>
-                  <div className={`px-4 py-2 rounded-2xl max-w-lg ${msg.fromId === currentUser.id ? 'bg-brand-primary text-dark-1 rounded-br-none' : 'bg-dark-3 text-light-1 rounded-bl-none'}`}>
-                    {msg.text}
-                  </div>
-                   <p className="text-xs text-light-3 mt-1 px-2">{formatMessageTimestamp(msg.timestamp)}</p>
-                </div>
-              ))}
-              {isOtherUserTyping && (
-                <div className="flex items-end">
-                    <div className="px-4 py-2 rounded-2xl max-w-lg bg-dark-3 text-light-1 rounded-bl-none">
-                        <div className="typing-indicator">
-                            <span></span><span></span><span></span>
+  const ChatWindow = () => {
+    const lastReadByRecipientIndex = useMemo(() => {
+        for (let i = displayedMessages.length - 1; i >= 0; i--) {
+            if (displayedMessages[i].fromId === currentUser.id && displayedMessages[i].isRead) {
+                return i;
+            }
+        }
+        return -1;
+    }, [displayedMessages, currentUser.id]);
+
+    return (
+        <div className={`w-full md:w-2/3 lg:w-3/4 flex flex-col bg-dark-1 ${!activeConversationUserId ? 'hidden md:flex' : 'flex'}`}>
+        {activeConversationUser ? (
+            <>
+            <div className="p-4 border-b border-dark-3 flex items-center space-x-4">
+                <button className="md:hidden text-light-2" onClick={() => setActiveConversationUserId(null)}>
+                    <ArrowLeftIcon />
+                </button>
+                <button className="flex items-center space-x-4 group" onClick={() => onNavigate('profile', { userId: activeConversationUser.id })}>
+                    <img src={activeConversationUser.avatarUrl} alt={activeConversationUser.name} className="w-10 h-10 rounded-full" />
+                    <div>
+                    <h3 className="font-bold group-hover:text-brand-primary transition-colors">{activeConversationUser.name}</h3>
+                    { (activeConversationUser as Creator).handle && <p className="text-sm text-light-3 text-left">@{(activeConversationUser as Creator).handle}</p>}
+                    </div>
+                </button>
+            </div>
+            <div className="flex-grow p-4 overflow-y-auto" ref={chatContainerRef}>
+                {hasMore && (
+                    <div className="text-center mb-4">
+                        <button
+                            onClick={handleLoadMore}
+                            disabled={isLoadingMore}
+                            className="bg-dark-3 text-brand-primary font-semibold py-2 px-4 rounded-full transition-colors hover:bg-dark-1 disabled:opacity-50"
+                        >
+                            {isLoadingMore ? 'Loading...' : 'Load More Messages'}
+                        </button>
+                    </div>
+                )}
+                <div className="flex flex-col space-y-1">
+                {displayedMessages.map((msg, index) => {
+                    const isSentByMe = msg.fromId === currentUser.id;
+                    const showReadReceipt = isSentByMe && index === lastReadByRecipientIndex;
+
+                    return (
+                    <div key={msg.id} className={`flex flex-col ${isSentByMe ? 'items-end' : 'items-start'}`}>
+                        <div className={`px-4 py-2 rounded-2xl max-w-lg transition-opacity ${isSentByMe ? `bg-brand-primary text-dark-1 rounded-br-none ${msg.isRead ? 'opacity-75' : ''}` : 'bg-dark-3 text-light-1 rounded-bl-none'}`}>
+                        {msg.text}
+                        </div>
+                        <div className="flex items-center space-x-1.5 text-xs text-light-3 mt-1 px-2">
+                            {showReadReceipt && activeConversationUser ? (
+                                <div className="flex items-center space-x-1" aria-label={`Read by ${activeConversationUser.name}`}>
+                                    <img src={activeConversationUser.avatarUrl} alt="" className="w-4 h-4 rounded-full" />
+                                    <span>Read &middot; {formatMessageTimestamp(msg.timestamp)}</span>
+                                </div>
+                            ) : (
+                                <>
+                                    <span>{formatMessageTimestamp(msg.timestamp)}</span>
+                                    {isSentByMe && (
+                                        <>
+                                            {msg.status === 'sending' && <SendingIcon />}
+                                            {msg.status === 'sent' && <SentIcon />}
+                                            {msg.status === 'failed' && <span className="text-red-400" title="Failed to send"><FailedIcon /></span>}
+                                        </>
+                                    )}
+                                </>
+                            )}
                         </div>
                     </div>
+                    );
+                })}
+                {isOtherUserTyping && activeConversationUser && (
+                    <div className="flex items-end space-x-3">
+                        <img src={activeConversationUser.avatarUrl} alt={`${activeConversationUser.name} is typing`} className="w-8 h-8 rounded-full" />
+                        <div className="px-4 py-2 rounded-2xl max-w-lg bg-dark-3 text-light-1 rounded-bl-none">
+                            <div className="typing-indicator">
+                                <span></span><span></span><span></span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                <div ref={messagesEndRef} />
                 </div>
-              )}
-               <div ref={messagesEndRef} />
             </div>
-          </div>
-          <div className="p-4 border-t border-dark-3">
-             {(isLoadingSuggestions || suggestions.length > 0) && (
-              <div className="mb-3 flex items-center gap-2 flex-wrap">
-                  {isLoadingSuggestions ? (
-                      <p className="text-sm text-light-3 flex items-center gap-2"><SparklesIcon /> Thinking of replies...</p>
-                  ) : (
-                      suggestions.map((s, i) => (
-                          <button key={i} onClick={() => handleSuggestionClick(s)} className="px-3 py-1 bg-dark-3 text-light-2 text-sm rounded-full hover:bg-brand-primary hover:text-dark-1 transition-colors">
-                            {s}
-                          </button>
-                      ))
-                  )}
-              </div>
-            )}
-            <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
-               <button type="button" onClick={handleToggleRecording} className={`p-3 rounded-full transition-colors ${isRecording ? 'bg-red-500/80 text-white animate-pulse' : 'bg-dark-3 text-light-2 hover:bg-dark-2'}`}>
-                  {isRecording ? <MicOffIcon /> : <MicIcon />}
-              </button>
-              <input
-                type="text"
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                placeholder={isRecording ? 'Listening...' : "Type a message..."}
-                className="w-full bg-dark-3 p-3 rounded-full text-light-1 focus:outline-none focus:ring-2 focus:ring-brand-primary"
-                autoComplete="off"
-              />
-              <button type="submit" className="bg-brand-primary text-dark-1 p-3 rounded-full disabled:bg-dark-3" disabled={!messageText.trim()}>
-                <SendIcon />
-              </button>
-            </form>
-          </div>
-        </>
-      ) : (
-        <div className="flex-grow flex items-center justify-center text-light-3">
-          <p>Select a conversation to start chatting.</p>
+            <div className="p-4 border-t border-dark-3">
+                {(isLoadingSuggestions || suggestions.length > 0) && (
+                <div className="mb-3 flex items-center gap-2 flex-wrap">
+                    {isLoadingSuggestions ? (
+                        <p className="text-sm text-light-3 flex items-center gap-2"><SparklesIcon /> Thinking of replies...</p>
+                    ) : (
+                        suggestions.map((s, i) => (
+                            <button key={i} onClick={() => handleSuggestionClick(s)} className="px-3 py-1 bg-dark-3 text-light-2 text-sm rounded-full hover:bg-brand-primary hover:text-dark-1 transition-colors">
+                                {s}
+                            </button>
+                        ))
+                    )}
+                </div>
+                )}
+                <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
+                <button type="button" onClick={handleToggleRecording} className={`p-3 rounded-full transition-colors ${isRecording ? 'bg-red-500/80 text-white animate-pulse' : 'bg-dark-3 text-light-2 hover:bg-dark-2'}`}>
+                    {isRecording ? <MicOffIcon /> : <MicIcon />}
+                </button>
+                <input
+                    type="text"
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    placeholder={isRecording ? 'Listening...' : "Type a message..."}
+                    className="w-full bg-dark-3 p-3 rounded-full text-light-1 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                    autoComplete="off"
+                />
+                <button type="submit" className="bg-brand-primary text-dark-1 p-3 rounded-full disabled:bg-dark-3" disabled={!messageText.trim()}>
+                    <SendIcon />
+                </button>
+                </form>
+            </div>
+            </>
+        ) : (
+            <div className="flex-grow flex items-center justify-center text-light-3">
+            <p>Select a conversation to start chatting.</p>
+            </div>
+        )}
         </div>
-      )}
-    </div>
-  );
+    );
+    };
 
   return (
     <div className="w-full max-w-7xl mx-auto h-full bg-dark-2 md:rounded-lg overflow-hidden flex">

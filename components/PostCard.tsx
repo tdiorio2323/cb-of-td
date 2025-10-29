@@ -1,6 +1,6 @@
 import React from 'react';
 import { Post, Creator } from '../types';
-import { LikeIcon, CommentIcon, SendIcon, TipIcon } from './icons';
+import { LikeIcon, CommentIcon, SendIcon, TipIcon, LockIcon } from './icons';
 
 interface PostCardProps {
   post: Post;
@@ -46,7 +46,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, creator, onCreatorClick, canD
             >
                 {creator.name}
             </h3>
-            <p className="text-sm text-light-3">@{creator.handle} &middot; {timeAgo(post.timestamp)}</p>
+            <p className="text-sm text-light-3 flex items-center space-x-2">
+                <span>@{creator.handle} &middot; {timeAgo(post.timestamp)}</span>
+                {post.isPrivate && <LockIcon />}
+            </p>
             </div>
         </div>
         {canDelete && (

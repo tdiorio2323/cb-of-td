@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import PostCard from './PostCard';
 import ProfileHeader from './ProfileHeader';
 import MessagingView from './MessagingView';
 import { usePlatformData } from '../hooks/usePlatformData';
 import { User, Creator } from '../types';
 import BottomNav from './BottomNav';
+import AccessCodeModal from './AccessCodeModal';
 
 interface FanViewProps {
   currentUser: User;
@@ -15,6 +16,7 @@ interface FanViewProps {
 }
 
 const FanView: React.FC<FanViewProps> = ({ currentUser, setCurrentUser, navigation, onNavigate, platformData }) => {
+  const [showAccessModalFor, setShowAccessModalFor] = useState<Creator | null>(null);
 
   const {
     creators,
@@ -37,9 +39,14 @@ const FanView: React.FC<FanViewProps> = ({ currentUser, setCurrentUser, navigati
     onNavigate('messages', { initialConversationUserId: userId });
   }
 
-  const handleFollow = (creatorId: string) => {
-    followCreator(currentUser.id, creatorId);
-    setCurrentUser(prev => ({...prev, subscribedTo: [...prev.subscribedTo, creatorId]}));
+  const handleSubscribe = (creatorId: string, enteredCode: string): boolean => {
+    const creator = getCreatorById(creatorId);
+    if (creator && creator.accessCode.toUpperCase() === enteredCode.toUpperCase()) {
+      followCreator(currentUser.id, creatorId);
+      setCurrentUser(prev => ({...prev, subscribedTo: [...prev.subscribedTo, creatorId]}));
+      return true;
+    }
+    return false;
   };
   
   const handleUnfollow = (creatorId: string) => {
@@ -85,8 +92,10 @@ const FanView: React.FC<FanViewProps> = ({ currentUser, setCurrentUser, navigati
   const renderCreatorProfile = (creator: Creator) => {
     const creatorPosts = getPostsByCreatorId(creator.id);
     const isFollowing = currentUser.subscribedTo.includes(creator.id);
-    const isOwnProfile = (currentUser.role === 'creator' && creator.id === getCreatorById(currentUser.id)?.id);
     const followerCount = getFollowerCount(creator.id);
+
+    const visiblePosts = isFollowing ? creatorPosts : creatorPosts.filter(p => !p.isPrivate);
+    const hasHiddenPosts = !isFollowing && creatorPosts.some(p => p.isPrivate);
 
     return (
       <div className="w-full max-w-3xl mx-auto">
@@ -95,15 +104,14 @@ const FanView: React.FC<FanViewProps> = ({ currentUser, setCurrentUser, navigati
           postCount={creatorPosts.length}
           followerCount={followerCount}
           isFollowing={isFollowing}
-          isOwnProfile={isOwnProfile}
-          onFollowClick={() => handleFollow(creator.id)}
+          isOwnProfile={false}
+          onFollowClick={() => setShowAccessModalFor(creator)}
           onUnfollow={handleUnfollow}
-          onEditProfile={() => onNavigate('settings')}
+          onEditProfile={() => {}}
           onMessageClick={() => handleStartChat(creator.id)}
         />
         <div className="px-4 md:px-0">
-          {isFollowing || isOwnProfile ? (
-            creatorPosts.map(post => (
+          {visiblePosts.length > 0 && visiblePosts.map(post => (
               <PostCard
                 key={post.id}
                 post={post}
@@ -111,13 +119,22 @@ const FanView: React.FC<FanViewProps> = ({ currentUser, setCurrentUser, navigati
                 onCreatorClick={handleCreatorClick}
               />
             ))
-          ) : (
-            <div className="text-center bg-dark-2 rounded-lg p-12">
+          }
+          
+          {hasHiddenPosts && (
+            <div className="text-center bg-dark-2 rounded-lg p-12 my-4 border border-dashed border-dark-3">
                 <h2 className="text-2xl font-bold">Content Locked</h2>
-                <p className="text-light-3 mt-2">Follow {creator.name} to see all of their posts.</p>
-                <button onClick={() => handleFollow(creator.id)} className="mt-6 bg-brand-primary text-dark-1 font-bold py-2 px-6 rounded-full transition-colors hover:bg-brand-secondary">
-                    Follow
+                <p className="text-light-3 mt-2">Subscribe to {creator.name} to see all of their private posts.</p>
+                <button onClick={() => setShowAccessModalFor(creator)} className="mt-6 bg-brand-primary text-dark-1 font-bold py-2 px-6 rounded-full transition-colors hover:bg-brand-secondary">
+                    Subscribe
                 </button>
+            </div>
+          )}
+
+          {visiblePosts.length === 0 && !hasHiddenPosts && (
+             <div className="text-center bg-dark-2 rounded-lg p-12">
+                <h2 className="text-xl font-bold">No posts yet!</h2>
+                <p className="text-light-3 mt-2">{creator.name} hasn't posted anything yet.</p>
             </div>
           )}
         </div>
@@ -191,6 +208,14 @@ const FanView: React.FC<FanViewProps> = ({ currentUser, setCurrentUser, navigati
         {renderContent()}
       </main>
       <BottomNav role={currentUser.role} activeView={view} onNavigate={onNavigate} />
+       {showAccessModalFor && (
+          <AccessCodeModal
+            isOpen={!!showAccessModalFor}
+            onClose={() => setShowAccessModalFor(null)}
+            creator={showAccessModalFor}
+            onSubmit={(code) => handleSubscribe(showAccessModalFor.id, code)}
+          />
+      )}
     </>
   );
 };

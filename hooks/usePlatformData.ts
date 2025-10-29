@@ -18,6 +18,8 @@ const CREATORS_DB: Creator[] = [
     avatarUrl: 'https://picsum.photos/seed/elena/200/200',
     bannerUrl: 'https://picsum.photos/seed/elenabanner/1200/400',
     isVerified: true,
+    subscriptionPrice: 5,
+    accessCode: 'TRAVEL',
   },
   {
     id: 'creator-2',
@@ -27,6 +29,8 @@ const CREATORS_DB: Creator[] = [
     avatarUrl: 'https://picsum.photos/seed/marco/200/200',
     bannerUrl: 'https://picsum.photos/seed/marcobanner/1200/400',
     isVerified: true,
+    subscriptionPrice: 10,
+    accessCode: 'FOODIE',
   },
   {
     id: 'creator-3',
@@ -36,6 +40,8 @@ const CREATORS_DB: Creator[] = [
     avatarUrl: 'https://picsum.photos/seed/yoga/200/200',
     bannerUrl: 'https://picsum.photos/seed/yogabanner/1200/400',
     isVerified: false,
+    subscriptionPrice: 7.5,
+    accessCode: 'YOGA',
   },
   {
     id: 'creator-4', // Corresponds to user-creator-1
@@ -45,6 +51,8 @@ const CREATORS_DB: Creator[] = [
     avatarUrl: 'https://picsum.photos/seed/alex/200/200',
     bannerUrl: 'https://picsum.photos/seed/alexbanner/1200/400',
     isVerified: true,
+    subscriptionPrice: 15,
+    accessCode: 'DEV',
   },
 ];
 
@@ -58,6 +66,7 @@ const POSTS_DB: Post[] = [
     likes: 1200,
     comments: 88,
     tips: 50,
+    isPrivate: true,
   },
   {
     id: 'p2',
@@ -68,6 +77,7 @@ const POSTS_DB: Post[] = [
     likes: 3400,
     comments: 210,
     tips: 150,
+    isPrivate: true,
   },
    {
     id: 'p3',
@@ -77,6 +87,7 @@ const POSTS_DB: Post[] = [
     likes: 890,
     comments: 54,
     tips: 75,
+    isPrivate: false,
   },
     {
     id: 'p4',
@@ -87,14 +98,35 @@ const POSTS_DB: Post[] = [
     likes: 1500,
     comments: 150,
     tips: 90,
+    isPrivate: true,
   },
 ];
 
+// Generate more messages for a long history example
+const generatedMessages: Message[] = [];
+for (let i = 0; i < 50; i++) {
+    const timestamp = new Date(new Date('2023-10-27T11:00:00Z').getTime() - (i + 3) * 60 * 1000).toISOString(); // Messages every minute before the existing ones
+    const fromId = i % 2 === 1 ? 'creator-2' : 'user-fan-1';
+    const toId = i % 2 === 1 ? 'user-fan-1' : 'creator-2';
+    generatedMessages.push({
+        id: `gen-m${i}`,
+        fromId,
+        toId,
+        text: `This is an older message, number ${50 - i}.`,
+        timestamp,
+        isRead: true,
+        status: 'sent',
+    });
+}
+
 const MESSAGES_DB: Message[] = [
-    { id: 'm1', fromId: 'user-fan-1', toId: 'creator-2', text: 'Hey Chef Marco! Loved the scallop recipe!', timestamp: '2023-10-27T11:00:00Z', isRead: true },
-    { id: 'm2', fromId: 'creator-2', toId: 'user-fan-1', text: 'Glad you enjoyed it Brenda!', timestamp: '2023-10-27T11:01:00Z', isRead: false },
-    { id: 'm3', fromId: 'user-fan-1', toId: 'creator-1', text: 'The Alps wallpaper is stunning!', timestamp: '2023-10-27T10:05:00Z', isRead: true },
+    ...generatedMessages,
+    { id: 'm1', fromId: 'user-fan-1', toId: 'creator-2', text: 'Hey Chef Marco! Loved the scallop recipe!', timestamp: '2023-10-27T11:00:00Z', isRead: true, status: 'sent' },
+    { id: 'm2', fromId: 'creator-2', toId: 'user-fan-1', text: 'Glad you enjoyed it Brenda!', timestamp: '2023-10-27T11:01:00Z', isRead: false, status: 'sent' },
+    { id: 'm3', fromId: 'user-fan-1', toId: 'creator-1', text: 'The Alps wallpaper is stunning!', timestamp: '2023-10-27T10:05:00Z', isRead: true, status: 'sent' },
 ]
+
+const MESSAGE_PAGE_SIZE = 15;
 
 export const usePlatformData = () => {
   const [users, setUsers] = useState<User[]>(USERS_DB);
@@ -128,6 +160,7 @@ export const usePlatformData = () => {
               text: newText,
               timestamp: new Date().toISOString(),
               isRead: false,
+              status: 'sent',
             };
             return [newMessage, ...prevMessages];
          });
@@ -160,10 +193,10 @@ export const usePlatformData = () => {
     ));
   }, []);
 
-  const addPost = useCallback((creatorId: string, text: string, imageUrl?: string) => {
+  const addPost = useCallback((creatorId: string, text: string, imageUrl: string | undefined, isPrivate: boolean) => {
     const newPost: Post = {
         id: `p${Date.now()}`,
-        creatorId, text, imageUrl,
+        creatorId, text, imageUrl, isPrivate,
         timestamp: new Date().toISOString(),
         likes: 0, comments: 0, tips: 0
     };
@@ -171,7 +204,7 @@ export const usePlatformData = () => {
   }, []);
   
   const getCreatorById = useCallback((creatorId: string) => creators.find(c => c.id === creatorId), [creators]);
-  const getPostsByCreatorId = useCallback((creatorId: string) => posts.filter(p => p.creatorId === creatorId), [posts]);
+  const getPostsByCreatorId = useCallback((creatorId: string) => posts.filter(p => p.creatorId === creatorId).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()), [posts]);
   
   const getSubscribedPosts = useCallback((currentUser: User) => {
     return posts.filter(p => currentUser.subscribedTo.includes(p.creatorId)).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
@@ -229,13 +262,25 @@ export const usePlatformData = () => {
     return Object.values(conversations).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [messages]);
 
-  const getMessages = useCallback((userId1: string, userId2: string) => {
-    return messages
+  const getMessagesPaginated = useCallback((userId1: string, userId2:string, page: number) => {
+    const allRelevantMessages = messages
       .filter(msg =>
         (msg.fromId === userId1 && msg.toId === userId2) ||
         (msg.fromId === userId2 && msg.toId === userId1)
       )
-      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    
+    const startIndex = (page - 1) * MESSAGE_PAGE_SIZE;
+    const endIndex = startIndex + MESSAGE_PAGE_SIZE;
+
+    const messagesForPage = allRelevantMessages.slice(startIndex, endIndex);
+    const hasMore = allRelevantMessages.length > endIndex;
+
+    return {
+        // Return messages sorted chronologically for display in the chat window
+        messages: messagesForPage.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()),
+        hasMore
+    };
   }, [messages]);
   
   const sendMessage = useCallback((fromId: string, toId: string, text: string) => {
@@ -246,8 +291,19 @@ export const usePlatformData = () => {
       text,
       timestamp: new Date().toISOString(),
       isRead: false,
+      status: 'sending',
     };
     setMessages(prev => [newMessage, ...prev]);
+
+    // Simulate network delay and potential failure
+    setTimeout(() => {
+        const didFail = Math.random() < 0.2; // 20% chance of failure
+        const newStatus = didFail ? 'failed' : 'sent';
+        
+        setMessages(prev => prev.map(msg => 
+            msg.id === newMessage.id ? { ...msg, status: newStatus } : msg
+        ));
+    }, 1500); // 1.5 second delay
   }, []);
 
   const getUnreadMessageCounts = useCallback((userId: string): Record<string, number> => {
@@ -285,6 +341,6 @@ export const usePlatformData = () => {
     addPost, getCreatorByUserId, updateCreatorProfile,
     toggleCreatorVerification, removePost,
     // Messaging
-    allUsersMap, getConversations, getMessages, sendMessage, getUnreadMessageCounts, markMessagesAsRead, getTotalUnreadCount,
+    allUsersMap, getConversations, getMessagesPaginated, sendMessage, getUnreadMessageCounts, markMessagesAsRead, getTotalUnreadCount,
   };
 };
