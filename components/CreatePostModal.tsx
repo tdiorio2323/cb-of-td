@@ -1,18 +1,19 @@
 
 
-import React, { useState, useRef } from 'react';
-import { Creator } from '../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { Creator, Post } from '../types';
 import { CloseIcon, AddImageIcon, SparklesIcon } from './icons';
 import { generatePostDraft } from '../services/geminiService';
 
 interface CreatePostModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (text: string, imageUrl: string | undefined, isPrivate: boolean) => void;
+  onSubmit: (data: { text: string; imageUrl: string | undefined; isPrivate: boolean; postId?: string }) => void;
   creator: Creator;
+  postToEdit?: Post | null;
 }
 
-const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onSubmit, creator }) => {
+const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onSubmit, creator, postToEdit }) => {
   const [text, setText] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -21,6 +22,23 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onSu
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [showAiPrompt, setShowAiPrompt] = useState(false);
+
+  const isEditing = !!postToEdit;
+
+  useEffect(() => {
+    if (isOpen && postToEdit) {
+      setText(postToEdit.text);
+      setImagePreview(postToEdit.imageUrl || null);
+      setIsPrivate(postToEdit.isPrivate);
+      setImageFile(null); // Can't reconstruct the file object, user must re-select to change
+    } else {
+      // Reset for create mode or when modal is closed
+      setText('');
+      setImagePreview(null);
+      setImageFile(null);
+      setIsPrivate(false);
+    }
+  }, [isOpen, postToEdit]);
 
   if (!isOpen) return null;
 
@@ -37,11 +55,12 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onSu
   };
 
   const handleSubmit = () => {
-    onSubmit(text, imagePreview || undefined, isPrivate);
-    setText('');
-    setImagePreview(null);
-    setImageFile(null);
-    setIsPrivate(false);
+    onSubmit({
+      text,
+      imageUrl: imagePreview || undefined,
+      isPrivate,
+      postId: postToEdit?.id
+    });
     onClose();
   };
   
@@ -70,7 +89,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onSu
         <button onClick={onClose} className="absolute top-4 right-4 text-light-3 hover:text-light-1">
           <CloseIcon />
         </button>
-        <h2 className="text-2xl font-bold mb-4">Create a new post</h2>
+        <h2 className="text-2xl font-bold mb-4">{isEditing ? 'Edit Post' : 'Create a new post'}</h2>
         <div className="flex items-start space-x-4">
           <img src={creator.avatarUrl} alt={creator.name} className="w-12 h-12 rounded-full" />
           <textarea
@@ -132,10 +151,10 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onSu
           />
           <button
             onClick={handleSubmit}
-            disabled={!text.trim() && !imageFile}
+            disabled={!text.trim() && !imageFile && !imagePreview}
             className="bg-brand-primary text-dark-1 font-bold py-2 px-6 rounded-full disabled:bg-dark-3 disabled:text-light-3 transition-colors"
           >
-            Post
+            {isEditing ? 'Save Changes' : 'Post'}
           </button>
         </div>
       </div>

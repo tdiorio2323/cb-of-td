@@ -1,17 +1,34 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Post, Creator } from '../types';
-import { LikeIcon, CommentIcon, SendIcon, TipIcon, LockIcon } from './icons';
+import { LikeIcon, CommentIcon, SendIcon, TipIcon, LockIcon, EditIcon, DeleteIcon } from './icons';
 
 interface PostCardProps {
   post: Post;
   creator?: Creator;
   onCreatorClick: (creatorId: string) => void;
-  canDelete?: boolean;
+  canManage?: boolean;
+  onEdit?: (post: Post) => void;
   onDelete?: (postId: string) => void;
+  onTip?: (postId: string) => void;
+  canTip?: boolean;
 }
 
-// FIX: Updated default value for onDelete to accept an argument to match its usage, preventing a type error.
-const PostCard: React.FC<PostCardProps> = ({ post, creator, onCreatorClick, canDelete = false, onDelete = (_) => {} }) => {
+// FIX: The default function for `onEdit` prop was missing a parameter, causing a type mismatch.
+// FIX: The default function for the `onTip` prop did not accept any arguments, causing an error when it was called with the post ID.
+const PostCard: React.FC<PostCardProps> = ({ post, creator, onCreatorClick, canManage = false, onEdit = (_) => {}, onDelete = (_) => {}, onTip = (_) => {}, canTip = false }) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   if (!creator) return null;
 
   const timeAgo = (date: string) => {
@@ -52,10 +69,28 @@ const PostCard: React.FC<PostCardProps> = ({ post, creator, onCreatorClick, canD
             </p>
             </div>
         </div>
-        {canDelete && (
-            <button onClick={() => onDelete(post.id)} className="text-light-3 hover:text-red-500 p-2 rounded-full">
-                &hellip;
-            </button>
+        {canManage && (
+            <div className="relative" ref={menuRef}>
+                <button onClick={() => setMenuOpen(!menuOpen)} className="text-light-3 hover:text-light-1 p-2 rounded-full hover:bg-dark-3">
+                    &hellip;
+                </button>
+                {menuOpen && (
+                    <div className="absolute right-0 mt-2 w-40 bg-dark-3 rounded-md shadow-lg z-10 animate-fade-in-up origin-top-right">
+                        <button 
+                            onClick={() => { onEdit(post); setMenuOpen(false); }} 
+                            className="w-full text-left px-4 py-2 text-sm text-light-2 hover:bg-dark-1 flex items-center rounded-t-md"
+                        >
+                           <EditIcon /> Edit Post
+                        </button>
+                        <button 
+                            onClick={() => { onDelete(post.id); setMenuOpen(false); }}
+                            className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-dark-1 flex items-center rounded-b-md"
+                        >
+                           <DeleteIcon /> Delete Post
+                        </button>
+                    </div>
+                )}
+            </div>
         )}
       </div>
       
@@ -75,7 +110,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, creator, onCreatorClick, canD
             <CommentIcon />
             <span>{post.comments.toLocaleString()}</span>
           </button>
-           <button className="flex items-center space-x-2 hover:text-green-400 transition-colors">
+           <button 
+                className="flex items-center space-x-2 hover:text-green-400 transition-colors disabled:text-light-3 disabled:cursor-not-allowed"
+                onClick={() => onTip(post.id)}
+                disabled={!canTip}
+            >
             <TipIcon />
             <span>${post.tips.toLocaleString()}</span>
           </button>

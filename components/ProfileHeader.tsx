@@ -12,9 +12,10 @@ interface ProfileHeaderProps {
   onUnfollow: (creatorId: string) => void;
   onEditProfile: () => void;
   onMessageClick: () => void;
+  totalTips?: number;
 }
 
-const ProfileHeader: React.FC<ProfileHeaderProps> = ({ creator, postCount, followerCount, isFollowing, isOwnProfile, onFollowClick, onUnfollow, onEditProfile, onMessageClick }) => {
+const ProfileHeader: React.FC<ProfileHeaderProps> = ({ creator, postCount, followerCount, isFollowing, isOwnProfile, onFollowClick, onUnfollow, onEditProfile, onMessageClick, totalTips }) => {
   
   const parseMarkdown = (text: string) => {
     if (!text) return { __html: '' };
@@ -87,6 +88,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ creator, postCount, follo
         <div className="mt-4 flex space-x-6 text-sm">
             <p><span className="font-bold">{postCount}</span> <span className="text-light-3">Posts</span></p>
             <p><span className="font-bold">{followerCount.toLocaleString()}</span> <span className="text-light-3">Followers</span></p>
+            {totalTips !== undefined && (
+                 <p><span className="font-bold">${totalTips.toLocaleString()}</span> <span className="text-light-3">Tips Received</span></p>
+            )}
         </div>
       </div>
     </div>

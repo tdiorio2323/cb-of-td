@@ -1,5 +1,5 @@
 import React from 'react';
-import { HomeIcon, DiscoverIcon, DashboardIcon, SettingsIcon, MessagesIcon } from './icons';
+import { HomeIcon, DiscoverIcon, DashboardIcon, SettingsIcon, MessagesIcon, BalanceIcon } from './icons';
 import RoleSwitcher from './RoleSwitcher';
 // FIX: Imported the `User` type to resolve the 'Cannot find name 'User'' error.
 import { User, UserRole } from '../types';
@@ -75,13 +75,19 @@ const Header: React.FC<HeaderProps> = ({ currentUser, switchUser, onNavigate, un
           >
             <img src="https://i.imgur.com/JRQ30XP.png" alt="CreatorHub Logo" className="h-8" />
           </div>
-          <div className="flex items-center space-x-8">
+          <div className="flex items-center space-x-4 md:space-x-8">
             <nav className="hidden md:flex items-center space-x-8">
                 {role === 'fan' && <FanNav />}
                 {role === 'creator' && <CreatorNav />}
                 {role === 'admin' && <AdminNav />}
             </nav>
             <RoleSwitcher currentRole={role} onSwitch={switchUser} />
+             {currentUser.role === 'fan' && (
+                <div className="hidden sm:flex items-center space-x-1.5 bg-dark-3 px-3 py-1.5 rounded-full">
+                    <BalanceIcon />
+                    <span className="font-semibold text-sm text-light-1">{currentUser.balance.toFixed(2)}</span>
+                </div>
+            )}
             <button onClick={() => onNavigate('profile', { userId: currentUser.id })} className="transition-transform hover:scale-105">
               <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-10 h-10 rounded-full border-2 border-dark-3"/>
             </button>

@@ -1,14 +1,14 @@
 import React from 'react';
 import { User } from '../types';
-import { usePlatformData } from '../hooks/usePlatformData';
+import { usePlatform } from '../App';
 import { VerifiedIcon, UnverifiedIcon, DeleteIcon } from './icons';
 
 interface AdminViewProps {
   currentUser: User;
-  platformData: ReturnType<typeof usePlatformData>;
 }
 
-const AdminView: React.FC<AdminViewProps> = ({ currentUser, platformData }) => {
+const AdminView: React.FC<AdminViewProps> = ({ currentUser }) => {
+  const platformData = usePlatform();
   const { 
     creators, 
     posts,

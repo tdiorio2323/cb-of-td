@@ -7,6 +7,7 @@ export interface User {
   role: UserRole;
   subscribedTo: string[]; // Array of creator IDs
   bio?: string;
+  balance: number;
 }
 
 export interface Creator {
@@ -40,5 +41,4 @@ export interface Message {
     text: string;
     timestamp: string;
     isRead: boolean;
-    status: 'sending' | 'sent' | 'failed';
 }

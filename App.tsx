@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, createContext, useContext } from 'react';
 import Header from './components/Header';
 import { useAuth } from './hooks/useAuth';
 import { UserRole } from './types';
@@ -8,6 +8,22 @@ import { usePlatformData } from './hooks/usePlatformData';
 import FanView from './components/FanView';
 import CreatorView from './components/CreatorView';
 import AdminView from './components/AdminView';
+
+// --- Setup Platform Data Context ---
+type PlatformDataContextType = ReturnType<typeof usePlatformData> | null;
+const PlatformDataContext = createContext<PlatformDataContextType>(null);
+
+/**
+ * Custom hook to easily access the platform data from any component.
+ */
+export const usePlatform = () => {
+  const context = useContext(PlatformDataContext);
+  if (!context) {
+    throw new Error('usePlatform must be used within a PlatformDataProvider');
+  }
+  return context;
+};
+// --- End Context Setup ---
 
 const getDefaultViewForRole = (role: UserRole) => {
     switch (role) {
@@ -43,19 +59,16 @@ const App: React.FC = () => {
                     setCurrentUser={setCurrentUser}
                     navigation={navigation}
                     onNavigate={handleNavigation}
-                    platformData={platformData}
                 />;
       case 'creator':
         return <CreatorView 
                     currentUser={currentUser}
                     navigation={navigation}
                     onNavigate={handleNavigation}
-                    platformData={platformData}
                 />;
       case 'admin':
         return <AdminView 
                     currentUser={currentUser} 
-                    platformData={platformData} 
                 />;
       default:
         return <div>Error: Unknown user role.</div>;
@@ -63,15 +76,17 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-transparent font-sans">
-      <Header 
-        currentUser={currentUser} 
-        switchUser={handleSwitchUser}
-        onNavigate={handleNavigation}
-        unreadMessages={unreadMessagesCount}
-      />
-      {renderAppForRole()}
-    </div>
+    <PlatformDataContext.Provider value={platformData}>
+        <div className="min-h-screen bg-transparent font-sans">
+        <Header 
+            currentUser={currentUser} 
+            switchUser={handleSwitchUser}
+            onNavigate={handleNavigation}
+            unreadMessages={unreadMessagesCount}
+        />
+        {renderAppForRole()}
+        </div>
+    </PlatformDataContext.Provider>
   );
 };
 

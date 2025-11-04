@@ -1,30 +1,34 @@
 import React, { useState, useMemo } from 'react';
-import { User, Creator } from '../types';
+import { User, Creator, Post } from '../types';
 import CreatePostModal from './CreatePostModal';
 import PostCard from './PostCard';
 import ProfileHeader from './ProfileHeader';
 import MessagingView from './MessagingView';
 import BottomNav from './BottomNav';
-// FIX: Import usePlatformData to resolve 'Cannot find name' error.
-import { usePlatformData } from '../hooks/usePlatformData';
+import { usePlatform } from '../App';
+import { CheckIcon } from './icons';
 
 interface CreatorViewProps {
   currentUser: User;
   navigation: { view: string; params: any };
   onNavigate: (view: string, params?: any) => void;
-  platformData: ReturnType<typeof usePlatformData>;
 }
 
-const CreatorView: React.FC<CreatorViewProps> = ({ currentUser, navigation, onNavigate, platformData }) => {
+const CreatorView: React.FC<CreatorViewProps> = ({ currentUser, navigation, onNavigate }) => {
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
   
+  const platformData = usePlatform();
   const { 
       getCreatorByUserId, 
       getPostsByCreatorId,
       addPost, 
+      updatePost,
+      removePost,
       allUsersMap,
       getFollowerCount,
       updateCreatorProfile,
+      getTotalTipsByCreatorId,
     } = platformData;
     
   const { view, params } = navigation;
@@ -35,13 +39,33 @@ const CreatorView: React.FC<CreatorViewProps> = ({ currentUser, navigation, onNa
     return <div className="text-center p-8">Could not load creator profile.</div>;
   }
   
-  const handleAddPost = (text: string, imageUrl: string | undefined, isPrivate: boolean) => {
-    addPost(creatorProfile.id, text, imageUrl, isPrivate);
+  const handleSavePost = (data: { text: string; imageUrl: string | undefined; isPrivate: boolean; postId?: string }) => {
+    if (data.postId) {
+      updatePost(data.postId, {
+        text: data.text,
+        imageUrl: data.imageUrl,
+        isPrivate: data.isPrivate,
+      });
+    } else {
+      addPost(creatorProfile.id, data.text, data.imageUrl, data.isPrivate);
+    }
   };
   
-  const handleCreatorClick = (creatorId: string) => {
-    onNavigate('profile', { userId: creatorId });
+  const handleEditPost = (post: Post) => {
+    setEditingPost(post);
+    setCreateModalOpen(true);
   };
+
+  const handleDeletePost = (postId: string) => {
+    if (window.confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+        removePost(postId);
+    }
+  };
+  
+  const handleCloseModal = () => {
+    setCreateModalOpen(false);
+    setEditingPost(null);
+  }
 
   const creatorPosts = getPostsByCreatorId(creatorProfile.id);
 
@@ -65,6 +89,9 @@ const CreatorView: React.FC<CreatorViewProps> = ({ currentUser, navigation, onNa
                 post={post} 
                 creator={creatorProfile}
                 onCreatorClick={() => onNavigate('profile', { userId: post.creatorId })}
+                canManage={true}
+                onEdit={handleEditPost}
+                onDelete={handleDeletePost}
             />
         ))}
     </div>
@@ -74,24 +101,37 @@ const CreatorView: React.FC<CreatorViewProps> = ({ currentUser, navigation, onNa
     const [bio, setBio] = useState(creator.bio);
     const [price, setPrice] = useState(creator.subscriptionPrice.toString());
     const [accessCode, setAccessCode] = useState(creator.accessCode);
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
     const maxChars = 300;
 
     const handleSave = () => {
+        setIsSaving(true);
+        setSaveSuccess(false);
+
         const priceNum = parseFloat(price);
         if (isNaN(priceNum) || priceNum < 0) {
             alert("Please enter a valid, non-negative price.");
+            setIsSaving(false);
             return;
         }
         if (!accessCode.trim()) {
             alert("Access code cannot be empty.");
+            setIsSaving(false);
             return;
         }
-        updateCreatorProfile(creator.id, { 
-            bio, 
-            subscriptionPrice: priceNum, 
-            accessCode: accessCode.trim().toUpperCase() 
-        });
-        alert("Profile saved!");
+
+        // Simulate async save for better UX
+        setTimeout(() => {
+            updateCreatorProfile(creator.id, { 
+                bio, 
+                subscriptionPrice: priceNum, 
+                accessCode: accessCode.trim().toUpperCase() 
+            });
+            setIsSaving(false);
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 3000); // Hide message after 3 seconds
+        }, 500);
     };
 
     const parseMarkdown = (text: string) => {
@@ -160,9 +200,19 @@ const CreatorView: React.FC<CreatorViewProps> = ({ currentUser, navigation, onNa
                     <p className="text-xs text-light-3 mt-2">Fans will need this code to subscribe to your content.</p>
                 </div>
 
-                 <div className="flex justify-end pt-4">
-                    <button onClick={handleSave} className="bg-brand-primary text-dark-1 font-bold py-2 px-6 rounded-full transition-colors hover:bg-brand-secondary">
-                        Save Changes
+                 <div className="flex justify-end items-center pt-4 space-x-4">
+                    {saveSuccess && (
+                        <p className="text-green-400 text-sm flex items-center space-x-2 animate-fade-in-up">
+                            <CheckIcon />
+                            <span>Saved!</span>
+                        </p>
+                    )}
+                    <button 
+                        onClick={handleSave} 
+                        disabled={isSaving}
+                        className="bg-brand-primary text-dark-1 font-bold py-2 px-6 rounded-full transition-colors hover:bg-brand-secondary disabled:bg-dark-3 disabled:text-light-3"
+                    >
+                        {isSaving ? 'Saving...' : 'Save Changes'}
                     </button>
                 </div>
             </div>
@@ -174,6 +224,7 @@ const CreatorView: React.FC<CreatorViewProps> = ({ currentUser, navigation, onNa
     const posts = getPostsByCreatorId(creator.id);
     const isOwnProfile = creator.id === creatorProfile.id;
     const followerCount = getFollowerCount(creator.id);
+    const totalTips = getTotalTipsByCreatorId(creator.id);
 
     return (
       <div className="w-full max-w-3xl mx-auto">
@@ -187,6 +238,7 @@ const CreatorView: React.FC<CreatorViewProps> = ({ currentUser, navigation, onNa
           onUnfollow={() => {}} // N/A
           onEditProfile={() => onNavigate('settings')}
           onMessageClick={() => onNavigate('messages', { initialConversationUserId: creator.id })}
+          totalTips={totalTips}
         />
         <div className="px-4 md:px-0">
             {posts.map(post => (
@@ -195,6 +247,9 @@ const CreatorView: React.FC<CreatorViewProps> = ({ currentUser, navigation, onNa
                 post={post}
                 creator={creator}
                 onCreatorClick={() => {}}
+                canManage={isOwnProfile}
+                onEdit={handleEditPost}
+                onDelete={handleDeletePost}
               />
             ))}
         </div>
@@ -233,12 +288,14 @@ const CreatorView: React.FC<CreatorViewProps> = ({ currentUser, navigation, onNa
             const profileUser = params.userId ? allUsersMap.get(params.userId) : null;
             if (!profileUser) return <div className="text-center p-8">User not found.</div>;
             
-            if (profileUser.role === 'creator') {
-                return renderCreatorProfile(profileUser as Creator);
+            if ('role' in profileUser && profileUser.role === 'creator') {
+                // The profileUser object for a creator is a merge of User and Creator types,
+                // and this satisfies the Creator interface for the render function.
+                return renderCreatorProfile(profileUser as unknown as Creator);
             } else {
                 return renderFanProfile(profileUser as User);
             }
-          case 'messages': return <MessagingView currentUser={currentUser} initialConversationUserId={params.initialConversationUserId} platformData={platformData} onNavigate={onNavigate} />;
+          case 'messages': return <MessagingView currentUser={currentUser} initialConversationUserId={params.initialConversationUserId} onNavigate={onNavigate} />;
           default: return renderDashboard();
       }
   }
@@ -250,9 +307,10 @@ const CreatorView: React.FC<CreatorViewProps> = ({ currentUser, navigation, onNa
       </main>
       <CreatePostModal
         isOpen={isCreateModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        onSubmit={handleAddPost}
+        onClose={handleCloseModal}
+        onSubmit={handleSavePost}
         creator={creatorProfile}
+        postToEdit={editingPost}
       />
       <BottomNav role={currentUser.role} activeView={view} onNavigate={onNavigate} />
     </>

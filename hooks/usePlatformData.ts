@@ -4,9 +4,9 @@ import { Creator, Post, User, Message } from '../types';
 // --- MOCK DATABASE ---
 
 const USERS_DB: User[] = [
-    { id: 'user-fan-1', name: 'Brenda Fan', avatarUrl: 'https://picsum.photos/seed/brenda/200/200', role: 'fan', subscribedTo: ['creator-2', 'creator-1'], bio: 'Just a fan enjoying the great content here! My favorite creators are Chef Marco and Elena Voyage.' },
-    { id: 'user-creator-1', name: 'Alex Codes', avatarUrl: 'https://picsum.photos/seed/alex/200/200', role: 'creator', subscribedTo: [] },
-    { id: 'user-admin-1', name: 'Admin', avatarUrl: 'https://picsum.photos/seed/admin/200/200', role: 'admin', subscribedTo: [] },
+    { id: 'user-fan-1', name: 'Brenda Fan', avatarUrl: 'https://picsum.photos/seed/brenda/200/200', role: 'fan', subscribedTo: ['creator-2', 'creator-1'], bio: 'Just a fan enjoying the great content here! My favorite creators are Chef Marco and Elena Voyage.', balance: 100 },
+    { id: 'user-creator-1', name: 'Alex Codes', avatarUrl: 'https://picsum.photos/seed/alex/200/200', role: 'creator', subscribedTo: [], balance: 0 },
+    { id: 'user-admin-1', name: 'Admin', avatarUrl: 'https://picsum.photos/seed/admin/200/200', role: 'admin', subscribedTo: [], balance: 0 },
 ];
 
 const CREATORS_DB: Creator[] = [
@@ -102,31 +102,11 @@ const POSTS_DB: Post[] = [
   },
 ];
 
-// Generate more messages for a long history example
-const generatedMessages: Message[] = [];
-for (let i = 0; i < 50; i++) {
-    const timestamp = new Date(new Date('2023-10-27T11:00:00Z').getTime() - (i + 3) * 60 * 1000).toISOString(); // Messages every minute before the existing ones
-    const fromId = i % 2 === 1 ? 'creator-2' : 'user-fan-1';
-    const toId = i % 2 === 1 ? 'user-fan-1' : 'creator-2';
-    generatedMessages.push({
-        id: `gen-m${i}`,
-        fromId,
-        toId,
-        text: `This is an older message, number ${50 - i}.`,
-        timestamp,
-        isRead: true,
-        status: 'sent',
-    });
-}
-
 const MESSAGES_DB: Message[] = [
-    ...generatedMessages,
-    { id: 'm1', fromId: 'user-fan-1', toId: 'creator-2', text: 'Hey Chef Marco! Loved the scallop recipe!', timestamp: '2023-10-27T11:00:00Z', isRead: true, status: 'sent' },
-    { id: 'm2', fromId: 'creator-2', toId: 'user-fan-1', text: 'Glad you enjoyed it Brenda!', timestamp: '2023-10-27T11:01:00Z', isRead: false, status: 'sent' },
-    { id: 'm3', fromId: 'user-fan-1', toId: 'creator-1', text: 'The Alps wallpaper is stunning!', timestamp: '2023-10-27T10:05:00Z', isRead: true, status: 'sent' },
+    { id: 'm1', fromId: 'user-fan-1', toId: 'creator-2', text: 'Hey Chef Marco! Loved the scallop recipe!', timestamp: '2023-10-27T11:00:00Z', isRead: true },
+    { id: 'm2', fromId: 'creator-2', toId: 'user-fan-1', text: 'Glad you enjoyed it Brenda!', timestamp: '2023-10-27T11:01:00Z', isRead: false },
+    { id: 'm3', fromId: 'user-fan-1', toId: 'creator-1', text: 'The Alps wallpaper is stunning!', timestamp: '2023-10-27T10:05:00Z', isRead: true },
 ]
-
-const MESSAGE_PAGE_SIZE = 15;
 
 export const usePlatformData = () => {
   const [users, setUsers] = useState<User[]>(USERS_DB);
@@ -160,7 +140,6 @@ export const usePlatformData = () => {
               text: newText,
               timestamp: new Date().toISOString(),
               isRead: false,
-              status: 'sent',
             };
             return [newMessage, ...prevMessages];
          });
@@ -179,13 +158,45 @@ export const usePlatformData = () => {
       return creators.find(c => c.name === user.name);
   }, [users, creators]);
   
-  const followCreator = useCallback((userId: string, creatorId: string) => {
-    setUsers(prevUsers => prevUsers.map(user => 
-        user.id === userId && !user.subscribedTo.includes(creatorId)
-        ? { ...user, subscribedTo: [...user.subscribedTo, creatorId] } 
-        : user
-    ));
-  }, []);
+  const subscribeCreator = useCallback((userId: string, creatorId: string, accessCode: string): boolean => {
+    const creator = creators.find(c => c.id === creatorId);
+    if (!creator) {
+        console.error("Creator not found");
+        return false;
+    }
+
+    let success = false;
+    setUsers(prevUsers => {
+        const userIndex = prevUsers.findIndex(u => u.id === userId);
+        if (userIndex === -1) {
+            console.error("User not found");
+            return prevUsers;
+        }
+
+        const user = prevUsers[userIndex];
+        
+        const isAlreadySubscribed = user.subscribedTo.includes(creatorId);
+        const hasEnoughFunds = user.balance >= creator.subscriptionPrice;
+        const isCodeCorrect = creator.accessCode.toUpperCase() === accessCode.toUpperCase();
+
+        if (isAlreadySubscribed || !hasEnoughFunds || !isCodeCorrect) {
+            return prevUsers;
+        }
+
+        const newUsers = [...prevUsers];
+        const updatedUser = {
+            ...user,
+            balance: user.balance - creator.subscriptionPrice,
+            subscribedTo: [...user.subscribedTo, creatorId],
+        };
+        newUsers[userIndex] = updatedUser;
+        success = true;
+        return newUsers;
+    });
+    
+    return success;
+  }, [creators]);
+
 
   const unfollowCreator = useCallback((userId: string, creatorId: string) => {
     setUsers(prevUsers => prevUsers.map(user => 
@@ -203,13 +214,39 @@ export const usePlatformData = () => {
     setPosts(prevPosts => [newPost, ...prevPosts]);
   }, []);
   
+  const updatePost = useCallback((postId: string, data: { text: string; imageUrl?: string; isPrivate: boolean }) => {
+    setPosts(prevPosts => 
+        prevPosts.map(post => 
+            post.id === postId 
+            ? { ...post, text: data.text, imageUrl: data.imageUrl, isPrivate: data.isPrivate } 
+            : post
+        )
+    );
+  }, []);
+  
   const getCreatorById = useCallback((creatorId: string) => creators.find(c => c.id === creatorId), [creators]);
   const getPostsByCreatorId = useCallback((creatorId: string) => posts.filter(p => p.creatorId === creatorId).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()), [posts]);
   
-  const getSubscribedPosts = useCallback((currentUser: User) => {
-    return posts.filter(p => currentUser.subscribedTo.includes(p.creatorId)).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const getMainFeed = useCallback((currentUser: User) => {
+    return posts
+        .filter(p => currentUser.subscribedTo.includes(p.creatorId) || !p.isPrivate)
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [posts]);
   
+  const getDiscoverFeed = useCallback((currentUser: User) => {
+    return posts
+        .filter(p => !p.isPrivate && !currentUser.subscribedTo.includes(p.creatorId))
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [posts]);
+
+  const likePost = useCallback((postId: string, userId: string) => {
+    setPosts(prevPosts =>
+        prevPosts.map(post =>
+            post.id === postId ? { ...post, likes: post.likes + 1 } : post
+        )
+    );
+  }, []);
+
   const getFollowerCount = useCallback((creatorId: string) => {
     return users.filter(user => user.subscribedTo.includes(creatorId)).length;
   }, [users]);
@@ -228,6 +265,41 @@ export const usePlatformData = () => {
       setPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
   
+    const tipPost = useCallback((fanId: string, postId: string, amount: number): User | null => {
+        let updatedFan: User | null = null;
+
+        setUsers(prevUsers => {
+            const fanIndex = prevUsers.findIndex(u => u.id === fanId);
+            if (fanIndex === -1 || prevUsers[fanIndex].balance < amount) {
+                return prevUsers;
+            }
+            const newUsers = [...prevUsers];
+            const fan = newUsers[fanIndex];
+            updatedFan = { ...fan, balance: fan.balance - amount };
+            newUsers[fanIndex] = updatedFan;
+            return newUsers;
+        });
+
+        if (updatedFan) {
+            setPosts(prevPosts => {
+                const postIndex = prevPosts.findIndex(p => p.id === postId);
+                if (postIndex === -1) return prevPosts;
+                const newPosts = [...prevPosts];
+                const post = newPosts[postIndex];
+                newPosts[postIndex] = { ...post, tips: post.tips + amount };
+                return newPosts;
+            });
+        }
+        
+        return updatedFan;
+    }, []);
+
+    const getTotalTipsByCreatorId = useCallback((creatorId: string) => {
+        return posts
+            .filter(p => p.creatorId === creatorId)
+            .reduce((total, post) => total + post.tips, 0);
+    }, [posts]);
+
   // --- Messaging Functions ---
 
   const allUsersMap = useMemo(() => {
@@ -262,25 +334,13 @@ export const usePlatformData = () => {
     return Object.values(conversations).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [messages]);
 
-  const getMessagesPaginated = useCallback((userId1: string, userId2:string, page: number) => {
-    const allRelevantMessages = messages
+  const getMessages = useCallback((userId1: string, userId2: string) => {
+    return messages
       .filter(msg =>
         (msg.fromId === userId1 && msg.toId === userId2) ||
         (msg.fromId === userId2 && msg.toId === userId1)
       )
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    
-    const startIndex = (page - 1) * MESSAGE_PAGE_SIZE;
-    const endIndex = startIndex + MESSAGE_PAGE_SIZE;
-
-    const messagesForPage = allRelevantMessages.slice(startIndex, endIndex);
-    const hasMore = allRelevantMessages.length > endIndex;
-
-    return {
-        // Return messages sorted chronologically for display in the chat window
-        messages: messagesForPage.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()),
-        hasMore
-    };
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
   }, [messages]);
   
   const sendMessage = useCallback((fromId: string, toId: string, text: string) => {
@@ -291,19 +351,8 @@ export const usePlatformData = () => {
       text,
       timestamp: new Date().toISOString(),
       isRead: false,
-      status: 'sending',
     };
     setMessages(prev => [newMessage, ...prev]);
-
-    // Simulate network delay and potential failure
-    setTimeout(() => {
-        const didFail = Math.random() < 0.2; // 20% chance of failure
-        const newStatus = didFail ? 'failed' : 'sent';
-        
-        setMessages(prev => prev.map(msg => 
-            msg.id === newMessage.id ? { ...msg, status: newStatus } : msg
-        ));
-    }, 1500); // 1.5 second delay
   }, []);
 
   const getUnreadMessageCounts = useCallback((userId: string): Record<string, number> => {
@@ -336,11 +385,12 @@ export const usePlatformData = () => {
 
   return { 
     users, creators, posts, messages, typingStatus,
-    getCreatorById, getPostsByCreatorId, getSubscribedPosts,
-    followCreator, unfollowCreator, getFollowerCount,
-    addPost, getCreatorByUserId, updateCreatorProfile,
+    getCreatorById, getPostsByCreatorId, getMainFeed, getDiscoverFeed,
+    subscribeCreator, unfollowCreator, getFollowerCount,
+    addPost, updatePost, getCreatorByUserId, updateCreatorProfile,
     toggleCreatorVerification, removePost,
+    tipPost, getTotalTipsByCreatorId, likePost,
     // Messaging
-    allUsersMap, getConversations, getMessagesPaginated, sendMessage, getUnreadMessageCounts, markMessagesAsRead, getTotalUnreadCount,
+    allUsersMap, getConversations, getMessages, sendMessage, getUnreadMessageCounts, markMessagesAsRead, getTotalUnreadCount,
   };
 };
