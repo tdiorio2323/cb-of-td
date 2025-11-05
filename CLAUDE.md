@@ -20,7 +20,7 @@ CreatorHub is a React/TypeScript front-end demonstration of a premium subscripti
 ```bash
 npm run dev
 ```
-Runs on http://localhost:3000 (configured in vite.config.ts)
+Runs on http://localhost:3000 (configured in vite.config.ts with host '0.0.0.0')
 
 **Build for production:**
 ```bash
@@ -30,6 +30,11 @@ npm run build
 **Preview production build:**
 ```bash
 npm run preview
+```
+
+**Type checking:**
+```bash
+tsc --noEmit
 ```
 
 ## Architecture
@@ -103,8 +108,9 @@ Three main AI capabilities powered by Gemini:
 ### Environment Configuration
 
 The app requires a Gemini API key for AI features:
-- Create a `.env` file at the project root with: `GEMINI_API_KEY=your_api_key_here`
-- Vite config (`vite.config.ts:14-15`) exposes this as `process.env.API_KEY` and `process.env.GEMINI_API_KEY`
+- Create a `.env` or `.env.local` file at the project root with: `GEMINI_API_KEY=your_api_key_here`
+- Vite config (`vite.config.ts:14-15`) exposes this as `process.env.API_KEY` and `process.env.GEMINI_API_KEY` via `loadEnv()`
+- Note: Standard Vite convention uses `VITE_*` prefix, but this project uses a custom define in vite.config.ts
 - If no API key is set, AI features will gracefully degrade (check `geminiService.ts`)
 - Get a free API key at: https://aistudio.google.com/app/apikey
 
@@ -155,6 +161,34 @@ All data resets on page refresh. Initial data is defined in:
 - **`MessageInput`**: Rich message input with audio recording and AI reply suggestions
 - **`ChatWindow`**: Real-time chat interface with message history
 
+## Code Conventions & Patterns
+
+### Component Development
+- **Single access hook**: Always use `usePlatformData()` (or `usePlatform()` from App.tsx) instead of creating new contexts
+- **Route shells own layout**: Add new screens inside the appropriate shell (`FanRoutes`, `CreatorRoutes`, `AdminRoutes`). Never import shell chrome inside a leaf screen—let `<Outlet/>` provide it
+- **Service boundaries**: Network or AI calls must live in `services/*`. Components should remain presentational + event wiring only
+- **Type exports**: All shared types must be exported from `types.ts`. Avoid ad-hoc inline types that duplicate shared ones
+- **File naming**: Use `PascalCase` for components, `camelCase` for hooks and utilities
+
+### Adding New Features
+When adding new screens:
+1. Export a **default component** from your screen file
+2. Register it under the correct shell route in `App.tsx`
+3. Do not bypass the route shells
+4. Pass data via `<Outlet context={...} />` from the shell, not via props
+
+When adding AI features:
+1. Add new functions to `services/geminiService.ts` (e.g., `generateCaption(input)`)
+2. Validate inputs in the service function
+3. Read API key from `process.env.GEMINI_API_KEY` (exposed via vite.config.ts)
+4. Return typed results defined in `types.ts`
+5. Components call these service functions and handle loading/error UI only
+
+### Data Access Patterns
+- Treat `hooks/usePlatformData.ts` as the single source of truth for app-wide data
+- If you need to derive data for multiple screens, implement a memoized selector in the hook and type it in `types.ts`
+- For persistence across refreshes, add a single localStorage layer inside the hook rather than per-component implementations
+
 ## Development Notes
 
 - TypeScript strict mode is not fully enabled; `allowJs: true` is set
@@ -163,3 +197,4 @@ All data resets on page refresh. Initial data is defined in:
 - No testing framework is currently configured
 - No linting configuration present
 - Authentication is simulated; the app uses a hardcoded `currentUserId` in `App.tsx` that can be changed via the login screen
+- Flat project structure: source files live at root level (App.tsx, types.ts, index.tsx), not in a `src/` directory

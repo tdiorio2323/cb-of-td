@@ -42,3 +42,16 @@ export interface Message {
     timestamp: string;
     isRead: boolean;
 }
+
+export type TransactionType = 'subscription' | 'tip' | 'deposit';
+
+export interface Transaction {
+    id: string;
+    userId: string;
+    type: TransactionType;
+    amount: number;
+    description: string;
+    timestamp: string;
+    relatedCreatorId?: string; // For subscriptions and tips
+    relatedPostId?: string; // For tips
+}

@@ -53,10 +53,13 @@ const FanRoutes: React.FC = () => {
             <img src="https://i.imgur.com/JRQ30XP.png" alt="CreatorHub Logo" className="h-8" />
           </div>
           <div className="flex items-center space-x-4 md:space-x-8">
-            <div className="flex items-center space-x-1.5 bg-dark-3 px-3 py-1.5 rounded-full">
+            <button
+              onClick={() => navigate('/fan/wallet')}
+              className="flex items-center space-x-1.5 bg-dark-3 px-3 py-1.5 rounded-full hover:bg-dark-2 transition-colors"
+            >
               <BalanceIcon />
               <span className="font-semibold text-sm text-light-1">{currentUser.balance.toFixed(2)}</span>
-            </div>
+            </button>
             <button onClick={() => navigate('/auth/login')} className="text-light-3 hover:text-light-1 transition-colors">
               <LogOut size={22} />
             </button>

@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { Creator, Post, User, Message } from '../types';
+import { Creator, Post, User, Message, Transaction } from '../types';
 
 // --- MOCK DATABASE ---
 
@@ -108,11 +108,18 @@ const MESSAGES_DB: Message[] = [
     { id: 'm3', fromId: 'user-fan-1', toId: 'creator-1', text: 'The Alps wallpaper is stunning!', timestamp: '2023-10-27T10:05:00Z', isRead: true },
 ]
 
+const TRANSACTIONS_DB: Transaction[] = [
+    { id: 'txn-1', userId: 'user-fan-1', type: 'deposit', amount: 100, description: 'Initial deposit', timestamp: '2023-10-25T09:00:00Z' },
+    { id: 'txn-2', userId: 'user-fan-1', type: 'subscription', amount: -10, description: 'Subscribed to Chef Marco', timestamp: '2023-10-26T10:30:00Z', relatedCreatorId: 'creator-2' },
+    { id: 'txn-3', userId: 'user-fan-1', type: 'subscription', amount: -5, description: 'Subscribed to Elena Voyage', timestamp: '2023-10-26T11:00:00Z', relatedCreatorId: 'creator-1' },
+]
+
 export const usePlatformData = () => {
   const [users, setUsers] = useState<User[]>(USERS_DB);
   const [creators, setCreators] = useState<Creator[]>(CREATORS_DB);
   const [posts, setPosts] = useState<Post[]>(POSTS_DB);
   const [messages, setMessages] = useState<Message[]>(MESSAGES_DB);
+  const [transactions, setTransactions] = useState<Transaction[]>(TRANSACTIONS_DB);
   const [typingStatus, setTypingStatus] = useState<Record<string, boolean>>({});
 
   // Real-time message and typing simulator
@@ -174,7 +181,7 @@ export const usePlatformData = () => {
         }
 
         const user = prevUsers[userIndex];
-        
+
         const isAlreadySubscribed = user.subscribedTo.includes(creatorId);
         const hasEnoughFunds = user.balance >= creator.subscriptionPrice;
         const isCodeCorrect = creator.accessCode.toUpperCase() === accessCode.toUpperCase();
@@ -193,9 +200,19 @@ export const usePlatformData = () => {
         success = true;
         return newUsers;
     });
-    
+
+    if (success) {
+        logTransaction({
+            userId,
+            type: 'subscription',
+            amount: -creator.subscriptionPrice,
+            description: `Subscribed to ${creator.name}`,
+            relatedCreatorId: creatorId,
+        });
+    }
+
     return success;
-  }, [creators]);
+  }, [creators, logTransaction]);
 
 
   const unfollowCreator = useCallback((userId: string, creatorId: string) => {
@@ -255,6 +272,26 @@ export const usePlatformData = () => {
       setCreators(prev => prev.map(c => c.id === creatorId ? { ...c, ...newProfileData } : c));
   }, []);
 
+  const updateUserProfile = useCallback((userId: string, newProfileData: Partial<User>) => {
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...newProfileData } : u));
+  }, []);
+
+  // Transaction tracking
+  const logTransaction = useCallback((transaction: Omit<Transaction, 'id' | 'timestamp'>) => {
+      const newTransaction: Transaction = {
+          ...transaction,
+          id: `txn-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+          timestamp: new Date().toISOString(),
+      };
+      setTransactions(prev => [newTransaction, ...prev]);
+  }, []);
+
+  const getTransactionsByUserId = useCallback((userId: string) => {
+      return transactions.filter(t => t.userId === userId).sort((a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+  }, [transactions]);
+
 
   // Admin functions
   const toggleCreatorVerification = useCallback((creatorId: string) => {
@@ -267,6 +304,7 @@ export const usePlatformData = () => {
   
     const tipPost = useCallback((fanId: string, postId: string, amount: number): User | null => {
         let updatedFan: User | null = null;
+        let post: Post | null = null;
 
         setUsers(prevUsers => {
             const fanIndex = prevUsers.findIndex(u => u.id === fanId);
@@ -285,14 +323,26 @@ export const usePlatformData = () => {
                 const postIndex = prevPosts.findIndex(p => p.id === postId);
                 if (postIndex === -1) return prevPosts;
                 const newPosts = [...prevPosts];
-                const post = newPosts[postIndex];
+                post = newPosts[postIndex];
                 newPosts[postIndex] = { ...post, tips: post.tips + amount };
                 return newPosts;
             });
+
+            if (post) {
+                const creator = creators.find(c => c.id === post.creatorId);
+                logTransaction({
+                    userId: fanId,
+                    type: 'tip',
+                    amount: -amount,
+                    description: `Tipped ${creator?.name || 'creator'}`,
+                    relatedCreatorId: post.creatorId,
+                    relatedPostId: postId,
+                });
+            }
         }
-        
+
         return updatedFan;
-    }, []);
+    }, [creators, logTransaction]);
 
     const getTotalTipsByCreatorId = useCallback((creatorId: string) => {
         return posts
@@ -383,13 +433,15 @@ export const usePlatformData = () => {
   }, []);
 
 
-  return { 
-    users, creators, posts, messages, typingStatus,
+  return {
+    users, creators, posts, messages, transactions, typingStatus,
     getCreatorById, getPostsByCreatorId, getMainFeed, getDiscoverFeed,
     subscribeCreator, unfollowCreator, getFollowerCount,
-    addPost, updatePost, getCreatorByUserId, updateCreatorProfile,
+    addPost, updatePost, getCreatorByUserId, updateCreatorProfile, updateUserProfile,
     toggleCreatorVerification, removePost,
     tipPost, getTotalTipsByCreatorId, likePost,
+    // Transactions
+    getTransactionsByUserId,
     // Messaging
     allUsersMap, getConversations, getMessages, sendMessage, getUnreadMessageCounts, markMessagesAsRead, getTotalUnreadCount,
   };

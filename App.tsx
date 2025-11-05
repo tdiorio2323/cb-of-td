@@ -19,6 +19,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import FanHomePage from './components/pages/FanHomePage';
 import FanDiscoverPage from './components/pages/FanDiscoverPage';
 import FanMessagesPage from './components/pages/FanMessagesPage';
+import FanSettingsPage from './components/pages/FanSettingsPage';
+import FanWalletPage from './components/pages/FanWalletPage';
 import CreatorDashboardPage from './components/pages/CreatorDashboardPage';
 import CreatorPostsPage from './components/pages/CreatorPostsPage';
 import CreatorSettingsPage from './components/pages/CreatorSettingsPage';
@@ -88,6 +90,8 @@ const App: React.FC = () => {
               <Route path="discover" element={<FanDiscoverPage />} />
               <Route path="messages" element={<FanMessagesPage />} />
               <Route path="messages/:conversationId" element={<FanMessagesPage />} />
+              <Route path="settings" element={<FanSettingsPage />} />
+              <Route path="wallet" element={<FanWalletPage />} />
               <Route index element={<Navigate to="/fan/home" replace />} />
             </Route>
           </Route>

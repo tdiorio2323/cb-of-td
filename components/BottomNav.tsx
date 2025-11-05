@@ -9,7 +9,7 @@ export default function BottomNav() {
           <NavItem to="/fan/home" label="Home" Icon={Home} />
           <NavItem to="/fan/discover" label="Discover" Icon={Search} />
           <NavItem to="/fan/messages" label="Messages" Icon={MessageCircleMore} />
-          <NavItem to="/fan/home" label="Profile" Icon={User2} />
+          <NavItem to="/fan/settings" label="Profile" Icon={User2} />
         </ul>
       </div>
     </nav>
