@@ -1,27 +1,34 @@
 import React, { useState } from 'react';
-import PostCard from './PostCard';
 import ProfileHeader from './ProfileHeader';
-import MessagingView from './MessagingView';
+import MessagesDashboard from './MessagesDashboard';
 import { User, Creator } from '../types';
 import BottomNav from './BottomNav';
 import AccessCodeModal from './AccessCodeModal';
 import { usePlatform } from '../App';
+import FanHomeFeed from './FanHomeFeed';
+import DiscoverPage from './DiscoverPage';
+import { LogOut } from 'lucide-react';
+import { BalanceIcon } from './icons';
+// FIX: Added missing import for PostCard.
+import PostCard from './PostCard';
+
 
 interface FanViewProps {
   currentUser: User;
-  setCurrentUser: React.Dispatch<React.SetStateAction<User>>;
-  navigation: { view: string; params: any };
-  onNavigate: (view: string, params?: any) => void;
+  onLogout: () => void;
 }
 
-const FanView: React.FC<FanViewProps> = ({ currentUser, setCurrentUser, navigation, onNavigate }) => {
+type FanNavView = 'home' | 'discover' | 'messages' | 'profile';
+
+const FanView: React.FC<FanViewProps> = ({ currentUser, onLogout }) => {
+  const [activeView, setActiveView] = useState<FanNavView>('home');
+  const [viewParams, setViewParams] = useState<any>({});
   const [showAccessModalFor, setShowAccessModalFor] = useState<Creator | null>(null);
 
   const platformData = usePlatform();
   const {
     creators,
     getCreatorById,
-    getMainFeed,
     getPostsByCreatorId,
     subscribeCreator,
     unfollowCreator,
@@ -29,88 +36,54 @@ const FanView: React.FC<FanViewProps> = ({ currentUser, setCurrentUser, navigati
     allUsersMap,
     tipPost,
     getTotalTipsByCreatorId,
+    getTotalUnreadCount,
   } = platformData;
-  
-  const { view, params } = navigation;
 
-  const handleCreatorClick = (creatorId: string) => {
-    onNavigate('profile', { userId: creatorId });
+  const handleNavigate = (view: FanNavView, params = {}) => {
+    setActiveView(view);
+    setViewParams(params);
   };
   
   const handleStartChat = (userId: string) => {
-    onNavigate('messages', { initialConversationUserId: userId });
+    handleNavigate('messages', { initialConversationUserId: userId });
   }
 
   const handleSubscribe = (creatorId: string, enteredCode: string): boolean => {
-    const creator = getCreatorById(creatorId);
-    // `subscribeCreator` handles checking the code, funds, and updates the user data source.
     const success = subscribeCreator(currentUser.id, creatorId, enteredCode);
-    if (success && creator) {
-      // We must also update the local `currentUser` state from `useAuth` to reflect the change immediately.
-      setCurrentUser(prev => ({
-        ...prev,
-        subscribedTo: [...prev.subscribedTo, creatorId],
-        balance: prev.balance - creator.subscriptionPrice
-      }));
-      return true;
-    }
-    return false;
+    return success;
   };
   
-  const handleUnfollow = (creatorId: string) => {
-    unfollowCreator(currentUser.id, creatorId);
-    setCurrentUser(prev => ({...prev, subscribedTo: prev.subscribedTo.filter(id => id !== creatorId)}));
-  };
-
   const handleTip = (postId: string) => {
     const tipAmount = 1;
     if (currentUser.balance < tipAmount) {
         alert("You don't have enough funds to send a tip.");
         return;
     }
-    const updatedUser = tipPost(currentUser.id, postId, tipAmount);
-    if (updatedUser) {
-        setCurrentUser(updatedUser);
-    } else {
-        alert("Tipping failed. Please try again later.");
-    }
+    tipPost(currentUser.id, postId, tipAmount);
   };
 
-  const renderFeed = () => (
-    <div className="w-full max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold my-4 px-4 md:px-0">Your Feed</h1>
-      {getMainFeed(currentUser).map(post => (
-        <PostCard
-          key={post.id}
-          post={post}
-          creator={getCreatorById(post.creatorId)}
-          onCreatorClick={handleCreatorClick}
-          onTip={handleTip}
-          canTip={true}
-        />
-      ))}
-    </div>
-  );
-
-  const renderDiscover = () => (
-    <div className="w-full max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold my-4 px-4 md:px-0">Discover Creators</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {creators.map(creator => (
-                <div key={creator.id} onClick={() => handleCreatorClick(creator.id)} className="bg-dark-2 rounded-lg overflow-hidden cursor-pointer group">
-                    <img src={creator.bannerUrl} alt={creator.name} className="h-32 w-full object-cover"/>
-                    <div className="p-4 relative">
-                        <img src={creator.avatarUrl} alt={creator.name} className="w-20 h-20 rounded-full absolute -top-10 border-4 border-dark-2 group-hover:scale-105 transition-transform"/>
-                        <div className="pt-10">
-                            <h3 className="font-bold text-lg">{creator.name}</h3>
-                            <p className="text-sm text-light-3">@{creator.handle}</p>
-                            <p className="text-sm mt-2 text-light-2 h-10 overflow-hidden">{creator.bio}</p>
-                        </div>
-                    </div>
-                </div>
-            ))}
+  const renderHeader = () => (
+    <header className="sticky top-0 z-40 bg-dark-1/80 backdrop-blur-lg border-b border-dark-3">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          <div 
+            className="cursor-pointer"
+            onClick={() => handleNavigate('home')}
+          >
+            <img src="https://i.imgur.com/JRQ30XP.png" alt="CreatorHub Logo" className="h-8" />
+          </div>
+          <div className="flex items-center space-x-4 md:space-x-8">
+            <div className="flex items-center space-x-1.5 bg-dark-3 px-3 py-1.5 rounded-full">
+                <BalanceIcon />
+                <span className="font-semibold text-sm text-light-1">{currentUser.balance.toFixed(2)}</span>
+            </div>
+            <button onClick={onLogout} className="text-light-3 hover:text-light-1 transition-colors">
+              <LogOut size={22} />
+            </button>
+          </div>
         </div>
-    </div>
+      </div>
+    </header>
   );
 
   const renderCreatorProfile = (creator: Creator) => {
@@ -131,7 +104,8 @@ const FanView: React.FC<FanViewProps> = ({ currentUser, setCurrentUser, navigati
           isFollowing={isFollowing}
           isOwnProfile={false}
           onFollowClick={() => setShowAccessModalFor(creator)}
-          onUnfollow={handleUnfollow}
+          // FIX: The onUnfollow prop expects a function that takes one argument (creatorId), but unfollowCreator expects two. This wraps it to pass the current user's ID correctly.
+          onUnfollow={(creatorId) => unfollowCreator(currentUser.id, creatorId)}
           onEditProfile={() => {}}
           onMessageClick={() => handleStartChat(creator.id)}
           totalTips={totalTips}
@@ -142,7 +116,7 @@ const FanView: React.FC<FanViewProps> = ({ currentUser, setCurrentUser, navigati
                 key={post.id}
                 post={post}
                 creator={creator}
-                onCreatorClick={handleCreatorClick}
+                onCreatorClick={() => handleNavigate('profile', { userId: creator.id })}
                 onTip={handleTip}
                 canTip={true}
               />
@@ -170,98 +144,51 @@ const FanView: React.FC<FanViewProps> = ({ currentUser, setCurrentUser, navigati
     );
   };
   
-  const renderFanProfile = (fanUser: User) => {
-      const followedCreators = creators.filter(c => fanUser.subscribedTo.includes(c.id));
-      const isOwnProfile = currentUser.id === fanUser.id;
-
-      return (
-        <div className="w-full max-w-3xl mx-auto">
-          <div className="bg-dark-2 p-8 rounded-lg text-center">
-            <img src={fanUser.avatarUrl} alt={fanUser.name} className="w-32 h-32 rounded-full mx-auto border-4 border-dark-1"/>
-            <h1 className="text-3xl font-bold mt-4">{fanUser.name}</h1>
-            <p className="text-light-3 mt-1">Fan Account</p>
-            {fanUser.bio && <p className="mt-4 max-w-xl mx-auto text-light-2">{fanUser.bio}</p>}
-            {isOwnProfile && (
-                 <div className="mt-6 border-t border-dark-3 pt-6">
-                    <p className="text-light-3">Your Balance</p>
-                    <p className="text-3xl font-bold text-green-400">${fanUser.balance.toFixed(2)}</p>
-                </div>
-            )}
-          </div>
-
-          {isOwnProfile && (
-            <div className="mt-8">
-              <h2 className="text-2xl font-bold mb-4 px-4 md:px-0">Active Subscriptions</h2>
-              {followedCreators.length > 0 ? (
-                <div className="space-y-4">
-                  {followedCreators.map(creator => (
-                    <div key={creator.id} className="bg-dark-2 p-4 rounded-lg flex flex-col md:flex-row md:items-center md:justify-between">
-                        <div className="flex items-center space-x-4 cursor-pointer flex-grow" onClick={() => handleCreatorClick(creator.id)}>
-                            <img src={creator.avatarUrl} alt={creator.name} className="w-12 h-12 rounded-full" />
-                            <div>
-                                <p className="font-bold text-light-1">{creator.name}</p>
-                                <p className="text-sm text-light-3">@{creator.handle}</p>
-                            </div>
-                        </div>
-                        <div className="mt-4 md:mt-0 flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-6">
-                            <div className="text-center md:text-left">
-                                <p className="text-xs text-light-3">Price</p>
-                                <p className="font-semibold">${creator.subscriptionPrice.toFixed(2)}/mo</p>
-                            </div>
-                             <div className="text-center md:text-left">
-                                <p className="text-xs text-light-3">Access Code</p>
-                                <p className="font-mono bg-dark-3 px-2 py-1 rounded text-sm tracking-wider">{creator.accessCode}</p>
-                            </div>
-                            <button
-                                onClick={() => handleUnfollow(creator.id)}
-                                className='bg-dark-3 text-light-2 px-4 py-2 rounded-full font-semibold transition-colors hover:bg-red-500/20 hover:text-red-400'
-                            >
-                                Unsubscribe
-                            </button>
-                        </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="bg-dark-2 p-8 rounded-lg text-center">
-                    <p className="text-light-3">You haven't subscribed to any creators yet.</p>
-                    <button onClick={() => onNavigate('discover')} className="mt-4 text-brand-primary font-semibold">
-                        Discover Creators
-                    </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      );
-  };
-  
   const renderContent = () => {
-      switch (view) {
-          case 'feed': return renderFeed();
-          case 'discover': return renderDiscover();
+      switch (activeView) {
+          case 'home': 
+            return <FanHomeFeed 
+                currentUser={currentUser} 
+                onCreatorClick={(creatorId) => handleNavigate('profile', { userId: creatorId })} 
+                onTip={handleTip} 
+            />;
+          case 'discover': 
+            return <DiscoverPage 
+                        currentUser={currentUser} 
+                        onCreatorClick={(creatorId) => handleNavigate('profile', { userId: creatorId })} 
+                        onTip={handleTip} 
+                    />;
           case 'profile':
-            const profileUser = params.userId ? allUsersMap.get(params.userId) : null;
+            const profileUser = viewParams.userId ? allUsersMap.get(viewParams.userId) : null;
             if (!profileUser) return <div className="text-center p-8">User not found.</div>;
             
             if ('role' in profileUser && profileUser.role === 'creator') {
-                // The profileUser object for a creator is a merge of User and Creator types,
-                // and this satisfies the Creator interface for the render function.
                 return renderCreatorProfile(profileUser as unknown as Creator);
-            } else {
-                return renderFanProfile(profileUser as User);
             }
-          case 'messages': return <MessagingView currentUser={currentUser} initialConversationUserId={params.initialConversationUserId} onNavigate={onNavigate} />;
-          default: return renderFeed();
+            // Add fan profile view if needed
+            return <div className="text-center p-8">Fan profiles are private.</div>
+          case 'messages': 
+            return <MessagesDashboard 
+              currentUser={currentUser} 
+              initialConversationUserId={viewParams.initialConversationUserId} 
+              onNavigate={(view, params) => handleNavigate(view as FanNavView, params)} 
+            />;
+          default: 
+            return <FanHomeFeed 
+                currentUser={currentUser} 
+                onCreatorClick={(creatorId) => handleNavigate('profile', { userId: creatorId })} 
+                onTip={handleTip} 
+            />;
       }
   }
 
   return (
-    <>
-      <main className={`container mx-auto ${view === 'messages' ? 'h-[calc(100vh-8rem-1rem)] md:h-[calc(100vh-4rem-3rem)] p-0' : 'py-6 px-4 md:px-0 pb-24 md:pb-6'}`}>
+    <div className="flex flex-col h-screen">
+      {renderHeader()}
+      <main className={`container mx-auto ${activeView === 'messages' ? 'h-[calc(100vh-8rem-1rem)] md:h-[calc(100vh-4rem-3rem)] p-0' : 'py-6 px-4 md:px-0 pb-24 md:pb-6'}`}>
         {renderContent()}
       </main>
-      <BottomNav role={currentUser.role} activeView={view} onNavigate={onNavigate} />
+      <BottomNav role={currentUser.role} activeView={activeView} onNavigate={(v) => handleNavigate(v as FanNavView)} />
        {showAccessModalFor && (
           <AccessCodeModal
             isOpen={!!showAccessModalFor}
@@ -270,7 +197,7 @@ const FanView: React.FC<FanViewProps> = ({ currentUser, setCurrentUser, navigati
             onSubmit={(code) => handleSubscribe(showAccessModalFor.id, code)}
           />
       )}
-    </>
+    </div>
   );
 };
 

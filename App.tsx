@@ -1,13 +1,12 @@
 import React, { useState, createContext, useContext } from 'react';
-import Header from './components/Header';
-import { useAuth } from './hooks/useAuth';
-import { UserRole } from './types';
 import { usePlatformData } from './hooks/usePlatformData';
+import { User } from './types';
 
 // Role-specific view components
 import FanView from './components/FanView';
 import CreatorView from './components/CreatorView';
 import AdminView from './components/AdminView';
+import LoginScreen from './components/LoginScreen';
 
 // --- Setup Platform Data Context ---
 type PlatformDataContextType = ReturnType<typeof usePlatformData> | null;
@@ -25,67 +24,41 @@ export const usePlatform = () => {
 };
 // --- End Context Setup ---
 
-const getDefaultViewForRole = (role: UserRole) => {
-    switch (role) {
-        case 'fan': return 'feed';
-        case 'creator': return 'dashboard';
-        case 'admin': return 'dashboard';
-        default: return 'feed';
-    }
-}
-
 const App: React.FC = () => {
-  const { currentUser, setCurrentUser, switchUser } = useAuth();
-  const [navigation, setNavigation] = useState({ view: getDefaultViewForRole(currentUser.role), params: {} });
-  
   const platformData = usePlatformData();
+  const [currentUserId, setCurrentUserId] = useState<string | null>('user-fan-1');
+  const currentUser = platformData.users.find(u => u.id === currentUserId);
 
-  const handleNavigation = (view: string, params = {}) => {
-    setNavigation({ view, params });
-  }
-
-  const handleSwitchUser = (role: UserRole) => {
-      switchUser(role);
-      handleNavigation(getDefaultViewForRole(role));
-  }
+  const handleLogout = () => {
+    setCurrentUserId(null); 
+  };
   
-  const unreadMessagesCount = platformData.getTotalUnreadCount(currentUser.id);
+  const handleLogin = (userId: string) => {
+    setCurrentUserId(userId);
+  };
 
-  const renderAppForRole = () => {
+  const renderView = () => {
+    if (!currentUser) {
+      return <LoginScreen onLogin={handleLogin} />;
+    }
+    
     switch (currentUser.role) {
       case 'fan':
-        return <FanView 
-                    currentUser={currentUser} 
-                    setCurrentUser={setCurrentUser}
-                    navigation={navigation}
-                    onNavigate={handleNavigation}
-                />;
+        return <FanView currentUser={currentUser} onLogout={handleLogout} />;
       case 'creator':
-        return <CreatorView 
-                    currentUser={currentUser}
-                    navigation={navigation}
-                    onNavigate={handleNavigation}
-                />;
+        return <CreatorView currentUser={currentUser} onLogout={handleLogout} />;
       case 'admin':
-        return <AdminView 
-                    currentUser={currentUser} 
-                />;
+        return <AdminView currentUser={currentUser} onLogout={handleLogout} />;
       default:
-        return <div>Error: Unknown user role.</div>;
+        return <div>Error: Unknown role. Please log out and try again.</div>;
     }
   };
 
   return (
     <PlatformDataContext.Provider value={platformData}>
-        <div className="min-h-screen bg-transparent font-sans">
-        <Header 
-            currentUser={currentUser} 
-            switchUser={handleSwitchUser}
-            onNavigate={handleNavigation}
-            unreadMessages={unreadMessagesCount}
-        />
-        {renderAppForRole()}
-        </div>
+      <div className="min-h-screen bg-dark-1 font-sans">
+        {renderView()}
+      </div>
     </PlatformDataContext.Provider>
   );
 };
