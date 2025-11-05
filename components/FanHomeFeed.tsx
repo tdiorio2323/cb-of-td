@@ -28,7 +28,7 @@ const FanHomeFeed: React.FC<FanHomeFeedProps> = ({ currentUser, onCreatorClick, 
           />
         ))
       ) : (
-        <div className="text-center text-light-3 p-8 bg-dark-2 rounded-lg">
+        <div className="text-center text-light-3 p-8 backdrop-blur-md bg-white/5 border border-white/10 rounded-lg">
           <h3 className="text-xl font-semibold">Your feed is quiet...</h3>
           <p className="mt-2">Follow creators or check out the Discover page to see more posts.</p>
         </div>

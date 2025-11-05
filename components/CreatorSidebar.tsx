@@ -14,7 +14,7 @@ const CreatorSidebar: React.FC<CreatorSidebarProps> = ({ activeView, onNavigate,
   const totalUnread = getTotalUnreadCount(currentUser.id);
 
   return (
-    <aside className="hidden md:flex flex-col w-64 bg-dark-2 border-r border-dark-3 p-4">
+    <aside className="hidden md:flex flex-col w-64 backdrop-blur-md bg-white/5 border-r border-white/10 p-4">
       <nav className="flex flex-col gap-2">
         <NavItem 
           label="Dashboard"
@@ -62,9 +62,9 @@ function NavItem({ label, icon, isActive, onClick, badgeCount = 0 }: NavItemProp
       onClick={onClick}
       className={`
         flex items-center gap-3 w-full p-3 rounded-lg text-left transition-colors
-        ${isActive 
-          ? 'bg-brand-primary text-dark-1 font-semibold' 
-          : 'text-light-2 hover:bg-dark-3 hover:text-light-1'
+        ${isActive
+          ? 'bg-brand-primary text-dark-1 font-semibold'
+          : 'text-light-2 hover:bg-white/10 hover:text-light-1'
         }
       `}
     >

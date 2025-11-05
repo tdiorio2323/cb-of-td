@@ -38,7 +38,7 @@ const AccessCodeModal: React.FC<AccessCodeModalProps> = ({ isOpen, onClose, onSu
         className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4"
         onClick={handleOverlayClick}
     >
-      <div className="bg-dark-2 rounded-lg w-full max-w-sm p-8 relative animate-fade-in-up text-center">
+      <div className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-lg w-full max-w-sm p-8 relative animate-fade-in-up text-center">
         <button onClick={onClose} className="absolute top-4 right-4 text-light-3 hover:text-light-1">
           <CloseIcon />
         </button>
@@ -52,7 +52,7 @@ const AccessCodeModal: React.FC<AccessCodeModalProps> = ({ isOpen, onClose, onSu
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 placeholder="ACCESS CODE"
-                className="w-full bg-dark-3 p-3 rounded-lg text-light-1 text-center font-bold tracking-widest text-lg focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                className="w-full backdrop-blur-md bg-white/5 border border-white/10 p-3 rounded-lg text-light-1 text-center font-bold tracking-widest text-lg focus:outline-none focus:ring-2 focus:ring-brand-primary"
                 />
             {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
             <button

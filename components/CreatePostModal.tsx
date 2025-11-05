@@ -85,7 +85,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onSu
         className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4"
         onClick={handleOverlayClick}
     >
-      <div className="bg-dark-2 rounded-lg w-full max-w-lg p-6 relative animate-fade-in-up">
+      <div className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-lg w-full max-w-lg p-6 relative animate-fade-in-up">
         <button onClick={onClose} className="absolute top-4 right-4 text-light-3 hover:text-light-1">
           <CloseIcon />
         </button>
@@ -96,7 +96,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onSu
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder={`What's on your mind, ${creator.name.split(' ')[0]}?`}
-            className="w-full bg-dark-3 p-3 rounded-lg text-light-1 focus:outline-none focus:ring-2 focus:ring-brand-primary min-h-[120px]"
+            className="w-full backdrop-blur-md bg-white/5 border border-white/10 p-3 rounded-lg text-light-1 focus:outline-none focus:ring-2 focus:ring-brand-primary min-h-[120px]"
           />
         </div>
         {imagePreview && (
@@ -113,13 +113,13 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onSu
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
                 placeholder="e.g., A post about my upcoming trip to Japan..."
-                className="w-full bg-dark-3 p-3 rounded-lg text-light-1 focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                className="w-full backdrop-blur-md bg-white/5 border border-white/10 p-3 rounded-lg text-light-1 focus:outline-none focus:ring-1 focus:ring-brand-primary"
                 rows={2}
             />
             <button
                 onClick={handleGeneratePost}
                 disabled={isGenerating || !aiPrompt.trim()}
-                className="w-full bg-dark-3 text-brand-primary font-bold py-2 px-4 rounded-full disabled:opacity-50 transition-colors hover:bg-dark-1"
+                className="w-full backdrop-blur-md bg-white/5 border border-white/10 text-brand-primary font-bold py-2 px-4 rounded-full disabled:opacity-50 transition-colors hover:bg-white/10"
             >
               {isGenerating ? 'Generating...' : 'Generate with AI'}
             </button>
@@ -127,10 +127,10 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, onSu
         )}
         <div className="mt-4 flex justify-between items-center">
             <div className="flex items-center space-x-4">
-                 <button onClick={() => fileInputRef.current?.click()} className="text-brand-primary hover:text-brand-secondary p-2 rounded-full hover:bg-dark-3 transition-colors">
+                 <button onClick={() => fileInputRef.current?.click()} className="text-brand-primary hover:text-brand-secondary p-2 rounded-full hover:bg-white/10 transition-colors">
                     <AddImageIcon />
                 </button>
-                 <button onClick={() => setShowAiPrompt(!showAiPrompt)} className="text-brand-primary hover:text-brand-secondary p-2 rounded-full hover:bg-dark-3 transition-colors">
+                 <button onClick={() => setShowAiPrompt(!showAiPrompt)} className="text-brand-primary hover:text-brand-secondary p-2 rounded-full hover:bg-white/10 transition-colors">
                     <SparklesIcon />
                 </button>
                 <label htmlFor="private-toggle" className="flex items-center cursor-pointer select-none">

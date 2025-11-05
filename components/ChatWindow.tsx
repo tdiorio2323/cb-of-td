@@ -55,7 +55,7 @@ export default function ChatWindow({ currentUser, otherUser, onNavigate, onBack 
           
           return (
              <div key={msg.id} className={`flex flex-col ${isSentByMe ? 'items-end' : 'items-start'}`}>
-                  <div className={`px-4 py-2 rounded-2xl max-w-lg ${isSentByMe ? 'bg-brand-primary text-dark-1 rounded-br-none' : 'bg-dark-3 text-light-1 rounded-bl-none'}`}>
+                  <div className={`px-4 py-2 rounded-2xl max-w-lg ${isSentByMe ? 'bg-brand-primary text-dark-1 rounded-br-none' : 'backdrop-blur-md bg-white/5 border border-white/10 text-light-1 rounded-bl-none'}`}>
                     <p className="whitespace-pre-wrap">{msg.text}</p>
                   </div>
                    <p className="text-xs text-light-3 mt-1 px-2">{formatMessageTimestamp(msg.timestamp)}</p>

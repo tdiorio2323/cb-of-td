@@ -47,7 +47,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, creator, onCreatorClick, canM
   };
 
   return (
-    <div className="bg-dark-2 border border-dark-3 rounded-lg overflow-hidden mb-6">
+    <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-lg overflow-hidden mb-6">
       <div className="p-4 flex items-center justify-between">
         <div className="flex items-center">
             <img
@@ -75,16 +75,16 @@ const PostCard: React.FC<PostCardProps> = ({ post, creator, onCreatorClick, canM
                     &hellip;
                 </button>
                 {menuOpen && (
-                    <div className="absolute right-0 mt-2 w-40 bg-dark-3 rounded-md shadow-lg z-10 animate-fade-in-up origin-top-right">
-                        <button 
-                            onClick={() => { onEdit(post); setMenuOpen(false); }} 
-                            className="w-full text-left px-4 py-2 text-sm text-light-2 hover:bg-dark-1 flex items-center rounded-t-md"
+                    <div className="absolute right-0 mt-2 w-40 backdrop-blur-md bg-white/10 border border-white/20 rounded-md shadow-lg z-10 animate-fade-in-up origin-top-right">
+                        <button
+                            onClick={() => { onEdit(post); setMenuOpen(false); }}
+                            className="w-full text-left px-4 py-2 text-sm text-light-2 hover:bg-white/10 flex items-center rounded-t-md"
                         >
                            <EditIcon /> Edit Post
                         </button>
-                        <button 
+                        <button
                             onClick={() => { onDelete(post.id); setMenuOpen(false); }}
-                            className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-dark-1 flex items-center rounded-b-md"
+                            className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/10 flex items-center rounded-b-md"
                         >
                            <DeleteIcon /> Delete Post
                         </button>

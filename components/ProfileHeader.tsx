@@ -44,13 +44,13 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ creator, postCount, follo
             <div className="flex items-center space-x-2">
                  <button 
                     onClick={onMessageClick}
-                    className='bg-dark-3 text-light-2 p-3 rounded-full font-semibold transition-colors hover:bg-brand-primary hover:text-dark-1'
+                    className='backdrop-blur-md bg-white/5 border border-white/10 text-light-2 p-3 rounded-full font-semibold transition-colors hover:bg-brand-primary hover:text-dark-1'
                 >
                     <MessagesIcon />
                 </button>
                 <button 
                     onClick={() => onUnfollow(creator.id)}
-                    className='bg-dark-3 text-light-2 px-6 py-2 rounded-full font-semibold transition-colors hover:bg-red-500/20 hover:text-red-400 group flex items-center space-x-2'
+                    className='backdrop-blur-md bg-white/5 border border-white/10 text-light-2 px-6 py-2 rounded-full font-semibold transition-colors hover:bg-red-500/20 hover:text-red-400 group flex items-center space-x-2'
                 >
                     <span className="group-hover:hidden flex items-center space-x-2"><CheckIcon/><span>Following</span></span>
                     <span className="hidden group-hover:block">Unfollow</span>
@@ -76,7 +76,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ creator, postCount, follo
             <img src={creator.avatarUrl} alt={creator.name} className="w-32 h-32 rounded-full border-4 border-dark-1"/>
         </div>
       </div>
-      <div className="pt-20 px-8 pb-4 bg-dark-2 rounded-b-lg">
+      <div className="pt-20 px-8 pb-4 backdrop-blur-md bg-white/5 border border-white/10 rounded-b-lg">
         <div className="flex justify-between items-start">
             <div>
                 <h1 className="text-3xl font-bold">{creator.name}</h1>
