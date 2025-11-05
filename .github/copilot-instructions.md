@@ -1,85 +1,70 @@
-# CreatorHub - AI Coding Instructions
+# GitHub Copilot Instructions — cb-of-td
 
-## Project Overview
-CreatorHub is a React/TypeScript demo of a premium creator subscription platform. It simulates a complete backend using in-memory data and integrates Google Gemini AI for content generation and chat features.
+**Goal:** Make AI agents productive fast. Follow these repo-specific patterns and workflows. Keep changes small and testable.
 
-**Stack**: React 19 + TypeScript + React Router v7 + Vite + Tailwind + Google Gemini API
+## Architecture (big picture)
+- **App shell:** React + TypeScript, built with **Vite** (`vite.config.ts`).
+- **Routing:** **React Router** with three shells that render `<Outlet/>`:
+  - `src/routes/FanRoutes.tsx` → `/fan/*`
+  - `src/routes/CreatorRoutes.tsx` → `/creator/*`
+  - `src/routes/AdminRoutes.tsx` → `/admin/*`
+  Public unauth routes live under `/` and `/auth/*`.
+- **App entry:** `App.tsx` wires the route tree and shared layout.
+- **State/data:** Centralized read layer via `hooks/usePlatformData.ts` and `types.ts`. Treat it as the single source of truth for app-wide data access.
+- **AI services:** `services/geminiService.ts` encapsulates model calls. Do not call model SDKs from components.
 
-## Critical Architecture Patterns
+## Conventions
+- **Single access hook:** Use `usePlatformData()` (or exported selectors) instead of creating new contexts. If a selector is missing, add it to the hook.
+- **Route shells own layout:** Add screens inside the appropriate shell. Do not import shell chrome inside a leaf screen—let `<Outlet/>` provide it.
+- **Typed props only:** Export shared types from `types.ts`. Avoid ad-hoc inline types that duplicate shared ones.
+- **Service boundaries:** Network or AI calls live in `services/*`. Components remain presentational + event wiring.
+- **File naming:** `PascalCase` for components, `camelCase` for hooks and utilities.
 
-### Global State via Context
-- **Core pattern**: `usePlatformData()` hook in `hooks/usePlatformData.ts` acts as a simulated backend
-- **Access**: Import `usePlatform()` from `App.tsx` in any component to access platform data
-- **Data flow**: All CRUD operations, business logic, and in-memory databases live in `usePlatformData`
-- **No external state libs**: Uses React Context exclusively
+## Environment & secrets
+- Vite exposes only `VITE_*` variables. For client usage of Gemini, set **`VITE_GEMINI_API_KEY`** in `.env.local`. Prefer server proxies for real secrets.
+- Never hardcode keys. Import from `import.meta.env`.
 
-### Route Structure & Protection
-- **Three role-based shells**: `routes/FanRoutes.tsx`, `CreatorRoutes.tsx`, `AdminRoutes.tsx`
-- **Nested routing**: Each shell uses `<Outlet />` and passes context data via `<Outlet context={...} />`
-- **Protection**: `ProtectedRoute` wrapper checks user roles before allowing access
-- **Navigation**: Role-specific dashboards determined in `App.tsx` `handleLogin()` function
+## Developer workflows
+- **Install:** `pnpm i` (or `npm i` if pnpm not available)
+- **Dev:** `pnpm dev` → Vite dev server
+- **Typecheck:** `pnpm typecheck` (if script exists) or `tsc --noEmit`
+- **Lint:** `pnpm lint` (fix with `pnpm lint --fix`)
+- **Build:** `pnpm build`
+- **Preview:** `pnpm preview`
+- If a command is missing, add a script in `package.json` rather than invoking tools directly from components.
 
-### In-Memory Data Simulation
-- **Database**: All data in `USERS_DB`, `CREATORS_DB`, `POSTS_DB`, `MESSAGES_DB` arrays in `usePlatformData.ts`
-- **Persistence**: Data resets on page refresh (no localStorage/backend)
-- **Business logic**: Subscription system with access codes, messaging, posts privacy levels
+## Routing rules (examples)
+- Public:
+  - `/` → temporary landing
+  - `/auth/login`, `/auth/signup`
+- Fan:
+  - `/fan/home`, `/fan/discover`, `/fan/messages`, `/fan/messages/:conversationId`
+  - `/@:handle` → `PublicCreatorProfile` (public creator profile pattern)
+- Creator:
+  - `/creator/dashboard`, `/creator/posts`, `/creator/settings`, `/creator/messages`, `/creator/messages/:conversationId`
+- Admin:
+  - `/admin/dashboard`, `/admin/creators`, `/admin/content`
 
-## Development Workflow
+When adding a screen, export a **default component** and register it under the correct shell route. Do not bypass shells.
 
-### Environment Setup
-```bash
-# Required for AI features
-echo "GEMINI_API_KEY=your_key_here" > .env
+## AI integration pattern (Gemini)
+- Use `services/geminiService.ts` as the single integration point. Add new functions there (e.g., `generateCaption(input)`) that:
+  1) validate inputs,
+  2) read `import.meta.env.VITE_GEMINI_API_KEY`,
+  3) return typed results defined in `types.ts`.
+- Components call these service functions and handle loading/error UI only.
 
-npm run dev    # http://localhost:3000
-npm run build  # Production build
-```
+## Data flow & testing hooks
+- Treat `usePlatformData.ts` as the in-memory read model. If you need to derive data for multiple screens, implement a memoized selector there and type it in `types.ts`.
+- If data resets on refresh, persist through a single point (e.g., localStorage layer inside the hook) rather than per-component hacks.
 
-### Key Configuration
-- **Path alias**: `@/` resolves to project root (configured in `vite.config.ts` and `tsconfig.json`)
-- **API key exposure**: Vite exposes env vars as `process.env.API_KEY` and `process.env.GEMINI_API_KEY`
-- **Dev server**: Runs on port 3000 with `host: '0.0.0.0'` for network access
+## What to change vs. avoid
+- **Change:** Add new screens inside shells, new selectors in `usePlatformData.ts`, new typed DTOs in `types.ts`, new AI helpers in `services/geminiService.ts`.
+- **Avoid:** New global state providers, direct model SDK calls from UI, re-implementing routing outside `App.tsx`, duplicate types, or `.env` access in components.
 
-## AI Integration Patterns
-
-### Gemini Service (`services/geminiService.ts`)
-- **Post drafts**: `gemini-2.5-pro` for content generation from topics
-- **Reply suggestions**: `gemini-2.5-flash` with structured JSON output for contextual chat replies  
-- **Audio transcription**: Multimodal processing for voice messages
-- **Graceful degradation**: All AI features check for API key availability
-
-## Component Conventions
-
-### Data Access Pattern
-```typescript
-// Standard pattern in components
-import { usePlatform } from '@/App';
-
-const Component = () => {
-  const { users, creators, posts, subscribe, sendMessage } = usePlatform();
-  // Component logic...
-};
-```
-
-### Route Shell Pattern
-- Shells provide: shared header, navigation, user context
-- Pages receive data via `useOutletContext()` hook
-- Bottom navigation (`BottomNav`) shows active route state
-
-### Subscription Flow
-- Access codes required for creator subscriptions (`Creator.accessCode`)
-- Balance checking and deduction handled in `usePlatformData.subscribe()`
-- `AccessCodeModal` component manages the subscription UX
-
-## Component Organization
-- **Pages**: `components/pages/` - Route-specific page components
-- **Shells**: `routes/` - Role-based layout wrappers  
-- **Reusable**: `components/` - Shared UI components (`PostCard`, `MessageInput`, etc.)
-- **Hooks**: `hooks/` - Custom hooks for data access and business logic
-
-## Development Notes
-- TypeScript strict mode disabled (`allowJs: true`)
-- No testing framework configured
-- No linting setup present
-- Authentication simulated via `currentUserId` state in `App.tsx`
-- Mobile-first design with Tailwind responsive utilities
+## PR checklist (agent)
+1. Route registered under the correct shell and path.
+2. Types live in `types.ts`; no duplicate inline types.
+3. New service calls live in `services/*`, not in components.
+4. Env reads use `import.meta.env.VITE_*`.
+5. `pnpm build && pnpm preview` succeeds; no TS errors; lints clean.
