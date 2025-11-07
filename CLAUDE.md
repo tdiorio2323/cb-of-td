@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CreatorHub is a React/TypeScript front-end demonstration of a premium subscription platform for creators. It simulates a complete backend using in-memory data and leverages Google Gemini API for AI-powered features.
+CreatorHub is a React/TypeScript demonstration of a premium subscription platform for creators. It simulates a complete backend using in-memory data and leverages Google Gemini API for AI-powered features.
 
 **Tech Stack:**
 - React 19.2.0 + TypeScript
@@ -13,23 +13,29 @@ CreatorHub is a React/TypeScript front-end demonstration of a premium subscripti
 - Tailwind CSS for styling
 - Google Gemini API (`@google/genai`) for AI features
 - `lucide-react` for icons
+- **Package manager:** pnpm (v10.20.0)
 
 ## Development Commands
 
+**Install dependencies:**
+```bash
+pnpm install
+```
+
 **Start development server:**
 ```bash
-npm run dev
+pnpm dev
 ```
 Runs on http://localhost:3000 (configured in vite.config.ts with host '0.0.0.0')
 
 **Build for production:**
 ```bash
-npm run build
+pnpm build
 ```
 
 **Preview production build:**
 ```bash
-npm run preview
+pnpm preview
 ```
 
 **Type checking:**
@@ -37,17 +43,33 @@ npm run preview
 tsc --noEmit
 ```
 
+**Generate route gallery:**
+```bash
+pnpm routes:gallery
+```
+Creates `route-gallery/gallery.html` with previews of all application routes at mobile and desktop widths.
+
 ## Architecture
+
+### File Structure
+
+The project uses a **flat structure** with source files at the root level:
+- `App.tsx`, `types.ts`, `index.tsx` — core app files
+- `components/` — all React components including page components
+- `hooks/` — React hooks (notably `usePlatformData.ts`)
+- `routes/` — route shell components (`FanRoutes.tsx`, `CreatorRoutes.tsx`, `AdminRoutes.tsx`)
+- `services/` — external service integrations (Gemini API)
 
 ### State Management & Data Flow
 
-The application uses React Context for global state management via `PlatformDataContext`:
+The application uses React Context for global state management:
 
-1. **`hooks/usePlatformData.ts`**: The core data layer that acts as a simulated backend
-   - Maintains in-memory databases for users, creators, posts, and messages
+1. **`hooks/usePlatformData.ts`**: The single source of truth for all app data
+   - Maintains in-memory databases for users, creators, posts, messages, and transactions
    - Provides all CRUD operations and business logic
    - Handles subscriptions (with access code verification), tipping, liking, messaging
    - Manages dynamic feeds (main feed vs discover feed based on subscription status)
+   - Tracks wallet balances and transaction history
 
 2. **`App.tsx`**: Root component that provides platform data to all child components
    - Creates `PlatformDataContext.Provider` wrapping the entire app
@@ -55,47 +77,42 @@ The application uses React Context for global state management via `PlatformData
    - Defines all application routes using React Router
    - Manages authentication state (currentUserId)
 
-3. **Access pattern**: Import `usePlatform()` from `App.tsx` in any component to access the full platform data and functions
+3. **Access pattern**: Import `usePlatform()` from `App.tsx` in any component to access the full platform data and functions. Never create additional contexts—extend `usePlatformData.ts` instead.
 
 ### Routing Architecture
 
 The app uses React Router with nested routes and protected route components:
 
 **Public routes:**
-- `/` - Landing page (unauthenticated users)
-- `/auth/login` - Login screen
-- `/auth/signup` - Signup page
-- `/@:handle` - Public creator profile pages (accessible without auth)
+- `/` — Landing page (unauthenticated users)
+- `/auth/login` — Login screen
+- `/auth/signup` — Signup page
+- `/@:handle` — Public creator profile pages (accessible without auth)
 
 **Protected routes** (using `ProtectedRoute` wrapper):
-- `/fan/*` - Fan routes wrapped in `FanRoutes` shell
-  - `/fan/home` - Home feed
-  - `/fan/discover` - Discover new creators
-  - `/fan/messages` - Message inbox
-  - `/fan/messages/:conversationId` - Specific conversation
-- `/creator/*` - Creator routes wrapped in `CreatorRoutes` shell
-  - `/creator/dashboard` - Creator dashboard with stats
-  - `/creator/posts` - Post management
-  - `/creator/settings` - Profile settings
-  - `/creator/messages` - Creator message inbox
-- `/admin/*` - Admin routes wrapped in `AdminRoutes` shell
-  - `/admin/dashboard` - Admin overview
-  - `/admin/creators` - Creator verification management
-  - `/admin/content` - Content moderation
+- `/fan/*` — Fan routes wrapped in `FanRoutes` shell
+  - `/fan/home` — Home feed
+  - `/fan/discover` — Discover new creators
+  - `/fan/messages` — Message inbox
+  - `/fan/messages/:conversationId` — Specific conversation
+  - `/fan/wallet` — Wallet and transaction history
+  - `/fan/settings` — Fan settings
+- `/creator/*` — Creator routes wrapped in `CreatorRoutes` shell
+  - `/creator/dashboard` — Creator dashboard with stats
+  - `/creator/posts` — Post management
+  - `/creator/settings` — Profile settings
+  - `/creator/messages` — Creator message inbox
+  - `/creator/messages/:conversationId` — Specific conversation
+- `/admin/*` — Admin routes wrapped in `AdminRoutes` shell
+  - `/admin/dashboard` — Admin overview
+  - `/admin/creators` — Creator verification management
+  - `/admin/content` — Content moderation
 
 **Route shells** (`routes/FanRoutes.tsx`, `CreatorRoutes.tsx`, `AdminRoutes.tsx`):
 - Provide shared layout (header, bottom navigation)
 - Handle role-specific logic
 - Use `<Outlet />` to render child routes
 - Pass context data to child pages via `<Outlet context={...} />`
-
-### Role-Based Views
-
-Each role has its own route shell and page components in `components/pages/`:
-
-- **Fan pages**: `FanHomePage`, `FanDiscoverPage`, `FanMessagesPage`
-- **Creator pages**: `CreatorDashboardPage`, `CreatorPostsPage`, `CreatorSettingsPage`, `CreatorMessagesPage`
-- **Admin pages**: `AdminDashboardPage`, `AdminCreatorsPage`, `AdminContentPage`
 
 ### AI Integration (`services/geminiService.ts`)
 
@@ -105,12 +122,14 @@ Three main AI capabilities powered by Gemini:
 2. **Suggested Replies**: Uses `gemini-2.5-flash` with JSON mode to analyze conversation history and suggest contextual replies
 3. **Audio Transcription**: Uses `gemini-2.5-flash` multimodal capabilities to transcribe audio recordings to text
 
+**All AI calls must go through `services/geminiService.ts`**—never call the Gemini SDK directly from components.
+
 ### Environment Configuration
 
 The app requires a Gemini API key for AI features:
 - Create a `.env` or `.env.local` file at the project root with: `GEMINI_API_KEY=your_api_key_here`
 - Vite config (`vite.config.ts:14-15`) exposes this as `process.env.API_KEY` and `process.env.GEMINI_API_KEY` via `loadEnv()`
-- Note: Standard Vite convention uses `VITE_*` prefix, but this project uses a custom define in vite.config.ts
+- **Note:** This project uses a custom `define` in vite.config.ts instead of the standard `VITE_*` prefix convention
 - If no API key is set, AI features will gracefully degrade (check `geminiService.ts`)
 - Get a free API key at: https://aistudio.google.com/app/apikey
 
@@ -128,7 +147,7 @@ import { usePlatform } from '@/App';
 - Fans must provide the correct access code (set by creator) to subscribe
 - Subscription requires sufficient balance in fan's account
 - Access codes are stored in `Creator.accessCode` field
-- Check `usePlatformData.ts` for subscription logic
+- Subscription logic is in `usePlatformData.ts`
 
 ### Post Privacy
 - Posts have an `isPrivate` boolean field
@@ -141,43 +160,38 @@ import { usePlatform } from '@/App';
 - Maintains unread counts per conversation
 - See `usePlatformData.ts` for messaging functions
 
+### Wallet & Transactions
+- Users have a `balance` field tracked in their User object
+- All tips and subscriptions create Transaction records
+- Transactions include type ('tip' | 'subscription'), amount, timestamp, and involved parties
+- Fan wallet page shows transaction history
+
 ### In-Memory Data
-All data resets on page refresh. Initial data is defined in:
-- `USERS_DB` (users with different roles)
-- `CREATORS_DB` (creator profiles with access codes)
-- `POSTS_DB` (sample posts with privacy settings)
-- `MESSAGES_DB` (initial message threads)
-
-## Key Components
-
-### Navigation & Layout
-- **`BottomNav`**: Mobile-first navigation bar that appears at bottom on mobile, shows active view
-- **`ProtectedRoute`**: Route wrapper that checks user role and redirects unauthorized users
-- **Route shells**: Provide consistent header, navigation, and layout for each role
-
-### Reusable UI Components
-- **`PostCard`**: Displays individual posts with like/tip functionality
-- **`AccessCodeModal`**: Modal for entering creator access codes during subscription
-- **`MessageInput`**: Rich message input with audio recording and AI reply suggestions
-- **`ChatWindow`**: Real-time chat interface with message history
+All data resets on page refresh. Initial data is defined in `usePlatformData.ts`:
+- `USERS_DB` — users with different roles
+- `CREATORS_DB` — creator profiles with access codes
+- `POSTS_DB` — sample posts with privacy settings
+- `MESSAGES_DB` — initial message threads
 
 ## Code Conventions & Patterns
 
 ### Component Development
-- **Single access hook**: Always use `usePlatformData()` (or `usePlatform()` from App.tsx) instead of creating new contexts
-- **Route shells own layout**: Add new screens inside the appropriate shell (`FanRoutes`, `CreatorRoutes`, `AdminRoutes`). Never import shell chrome inside a leaf screen—let `<Outlet/>` provide it
-- **Service boundaries**: Network or AI calls must live in `services/*`. Components should remain presentational + event wiring only
-- **Type exports**: All shared types must be exported from `types.ts`. Avoid ad-hoc inline types that duplicate shared ones
-- **File naming**: Use `PascalCase` for components, `camelCase` for hooks and utilities
+- **Single access hook**: Always use `usePlatformData()` (or `usePlatform()` from App.tsx) instead of creating new contexts. If you need new data access, add a selector to the hook.
+- **Route shells own layout**: Add new screens inside the appropriate shell (`FanRoutes`, `CreatorRoutes`, `AdminRoutes`). Never import shell chrome inside a leaf screen—let `<Outlet/>` provide it.
+- **Service boundaries**: Network or AI calls must live in `services/*`. Components should remain presentational + event wiring only.
+- **Type exports**: All shared types must be exported from `types.ts`. Avoid ad-hoc inline types that duplicate shared ones.
+- **File naming**: Use `PascalCase` for components, `camelCase` for hooks and utilities.
 
 ### Adding New Features
-When adding new screens:
-1. Export a **default component** from your screen file
-2. Register it under the correct shell route in `App.tsx`
-3. Do not bypass the route shells
-4. Pass data via `<Outlet context={...} />` from the shell, not via props
 
-When adding AI features:
+**When adding new screens:**
+1. Create the component in `components/pages/`
+2. Export a **default component** from your screen file
+3. Register it under the correct shell route in `App.tsx`
+4. Do not bypass the route shells
+5. Pass data via `<Outlet context={...} />` from the shell, not via props
+
+**When adding AI features:**
 1. Add new functions to `services/geminiService.ts` (e.g., `generateCaption(input)`)
 2. Validate inputs in the service function
 3. Read API key from `process.env.GEMINI_API_KEY` (exposed via vite.config.ts)
@@ -197,4 +211,4 @@ When adding AI features:
 - No testing framework is currently configured
 - No linting configuration present
 - Authentication is simulated; the app uses a hardcoded `currentUserId` in `App.tsx` that can be changed via the login screen
-- Flat project structure: source files live at root level (App.tsx, types.ts, index.tsx), not in a `src/` directory
+- Flat project structure: source files live at root level, not in a `src/` directory
