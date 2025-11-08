@@ -3,9 +3,12 @@ export type UserRole = 'fan' | 'creator' | 'admin';
 export interface User {
   id: string;
   name: string;
-  avatarUrl: string;
+  handle: string;
+  email: string;
+  avatarUrl?: string;
+  avatar?: string; // Alias for avatarUrl
   role: UserRole;
-  subscribedTo: string[]; // Array of creator IDs
+  subscribedTo?: string[]; // Array of creator IDs
   bio?: string;
   balance: number;
 }
@@ -15,22 +18,28 @@ export interface Creator {
   name: string;
   handle: string;
   bio: string;
-  avatarUrl: string;
-  bannerUrl: string;
+  avatarUrl?: string;
+  avatar?: string; // Alias for avatarUrl
+  bannerUrl?: string;
+  bannerImage?: string; // Alias for bannerUrl
   isVerified: boolean;
-  subscriptionPrice: number;
+  subscriptionPrice?: number;
+  monthlyPrice?: number; // Alias for subscriptionPrice
+  subscribers?: number;
   accessCode: string;
 }
 
 export interface Post {
-  id:string;
+  id: string;
   creatorId: string;
-  text: string;
+  text?: string;
+  content?: string; // Alias for text
   imageUrl?: string;
-  timestamp: string;
+  timestamp?: string;
+  createdAt?: string; // Alias for timestamp
   likes: number;
-  comments: number;
-  tips: number; // Added tips
+  comments?: number;
+  tips?: number; // Added tips
   isPrivate: boolean;
 }
 

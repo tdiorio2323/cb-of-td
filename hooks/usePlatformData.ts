@@ -4,9 +4,9 @@ import { Creator, Post, User, Message, Transaction } from '../types';
 // --- MOCK DATABASE ---
 
 const USERS_DB: User[] = [
-    { id: 'user-fan-1', name: 'Brenda Fan', avatarUrl: 'https://picsum.photos/seed/brenda/200/200', role: 'fan', subscribedTo: ['creator-2', 'creator-1'], bio: 'Just a fan enjoying the great content here! My favorite creators are Chef Marco and Elena Voyage.', balance: 100 },
-    { id: 'user-creator-1', name: 'Alex Codes', avatarUrl: 'https://picsum.photos/seed/alex/200/200', role: 'creator', subscribedTo: [], balance: 0 },
-    { id: 'user-admin-1', name: 'Admin', avatarUrl: 'https://picsum.photos/seed/admin/200/200', role: 'admin', subscribedTo: [], balance: 0 },
+    { id: 'user-fan-1', name: 'Brenda Fan', handle: 'brenda_fan', email: 'brenda@creatorhub.com', avatarUrl: 'https://picsum.photos/seed/brenda/200/200', role: 'fan', subscribedTo: ['creator-2', 'creator-1'], bio: 'Just a fan enjoying the great content here! My favorite creators are Chef Marco and Elena Voyage.', balance: 100 },
+    { id: 'user-creator-1', name: 'Alex Codes', handle: 'alex_codes', email: 'alex@creatorhub.com', avatarUrl: 'https://picsum.photos/seed/alex/200/200', role: 'creator', subscribedTo: [], balance: 0 },
+    { id: 'user-admin-1', name: 'Admin', handle: 'admin', email: 'admin@creatorhub.com', avatarUrl: 'https://picsum.photos/seed/admin/200/200', role: 'admin', subscribedTo: [], balance: 0 },
 ];
 
 const CREATORS_DB: Creator[] = [

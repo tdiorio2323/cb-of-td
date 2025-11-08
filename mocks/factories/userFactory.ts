@@ -49,6 +49,8 @@ export class UserFactory {
       id,
       name: `${firstName} ${lastName}`,
       avatarUrl: `/avatars/${firstName.toLowerCase()}.jpg`,
+      handle: `${firstName}${lastName}`.toLowerCase(),
+      email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@creatorhub.demo`,
       role: 'fan',
       subscribedTo: [],
       balance: 100,
