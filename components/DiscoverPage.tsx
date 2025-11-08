@@ -33,12 +33,13 @@ export default function DiscoverPage({ currentUser, onCreatorClick, onTip }: Dis
         {creatorsToDiscover.length > 0 ? (
           <div className="flex overflow-x-auto gap-4 pb-4 -mx-4 px-4">
             {creatorsToDiscover.map((creator) => (
-              <CreatorCard
-                key={creator.id}
-                creator={creator}
-                currentUser={currentUser}
-                onSubscribe={subscribeCreator}
-              />
+              <React.Fragment key={creator.id}>
+                <CreatorCard
+                  creator={creator}
+                  currentUser={currentUser}
+                  onSubscribe={subscribeCreator}
+                />
+              </React.Fragment>
             ))}
           </div>
         ) : (

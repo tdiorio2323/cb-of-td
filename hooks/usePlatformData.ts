@@ -164,7 +164,17 @@ export const usePlatformData = () => {
       if(user?.role !== 'creator') return undefined;
       return creators.find(c => c.name === user.name);
   }, [users, creators]);
-  
+
+  // Transaction tracking
+  const logTransaction = useCallback((transaction: Omit<Transaction, 'id' | 'timestamp'>) => {
+      const newTransaction: Transaction = {
+          ...transaction,
+          id: `txn-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+          timestamp: new Date().toISOString(),
+      };
+      setTransactions(prev => [newTransaction, ...prev]);
+  }, []);
+
   const subscribeCreator = useCallback((userId: string, creatorId: string, accessCode: string): boolean => {
     const creator = creators.find(c => c.id === creatorId);
     if (!creator) {
@@ -274,16 +284,6 @@ export const usePlatformData = () => {
 
   const updateUserProfile = useCallback((userId: string, newProfileData: Partial<User>) => {
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...newProfileData } : u));
-  }, []);
-
-  // Transaction tracking
-  const logTransaction = useCallback((transaction: Omit<Transaction, 'id' | 'timestamp'>) => {
-      const newTransaction: Transaction = {
-          ...transaction,
-          id: `txn-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-          timestamp: new Date().toISOString(),
-      };
-      setTransactions(prev => [newTransaction, ...prev]);
   }, []);
 
   const getTransactionsByUserId = useCallback((userId: string) => {

@@ -40,7 +40,19 @@ pnpm preview
 
 **Type checking:**
 ```bash
-tsc --noEmit
+pnpm typecheck
+```
+or directly: `tsc --noEmit`
+
+**Linting:**
+```bash
+pnpm lint
+```
+Fix issues automatically: `pnpm lint --fix`
+
+**Format code:**
+```bash
+pnpm format
 ```
 
 **Generate route gallery:**
@@ -53,12 +65,22 @@ Creates `route-gallery/gallery.html` with previews of all application routes at 
 
 ### File Structure
 
-The project uses a **flat structure** with source files at the root level:
-- `App.tsx`, `types.ts`, `index.tsx` — core app files
-- `components/` — all React components including page components
-- `hooks/` — React hooks (notably `usePlatformData.ts`)
-- `routes/` — route shell components (`FanRoutes.tsx`, `CreatorRoutes.tsx`, `AdminRoutes.tsx`)
-- `services/` — external service integrations (Gemini API)
+The project uses a **flat structure** with source files at the root level (no `src/` directory):
+- `App.tsx` — root component, routing configuration, and PlatformDataContext provider
+- `types.ts` — all shared TypeScript type definitions
+- `index.tsx` — application entry point
+- `components/` — all React components
+  - `components/pages/` — page components (FanHomePage, CreatorDashboardPage, etc.)
+  - Root-level components like LoginScreen, Header, MessageInput, etc.
+- `hooks/` — React hooks
+  - `usePlatformData.ts` — the single source of truth for all app data and business logic
+  - `useAuth.ts`, `useCreatorData.ts` — specialized hooks
+- `routes/` — route shell components that provide layout via `<Outlet/>`
+  - `FanRoutes.tsx`, `CreatorRoutes.tsx`, `AdminRoutes.tsx`
+- `services/` — external service integrations
+  - `geminiService.ts` — all Google Gemini API calls
+- `scripts/` — build and utility scripts
+- `mocks/` — mock data for testing (gitignored)
 
 ### State Management & Data Flow
 
@@ -205,10 +227,11 @@ All data resets on page refresh. Initial data is defined in `usePlatformData.ts`
 
 ## Development Notes
 
-- TypeScript strict mode is not fully enabled; `allowJs: true` is set
-- Using experimental decorators (`experimentalDecorators: true`)
-- Vite dev server runs on port 3000 with `host: '0.0.0.0'` for network access
-- No testing framework is currently configured
-- No linting configuration present
-- Authentication is simulated; the app uses a hardcoded `currentUserId` in `App.tsx` that can be changed via the login screen
-- Flat project structure: source files live at root level, not in a `src/` directory
+- **TypeScript:** Not using strict mode; `allowJs: true` is enabled; using experimental decorators
+- **Vite:** Dev server runs on port 3000 with `host: '0.0.0.0'` for network access
+- **Testing:** No testing framework currently configured
+- **Linting:** ESLint configured with TypeScript, React, and React Hooks plugins (.eslintrc.cjs)
+- **Formatting:** Prettier configured with 100 char line width (.prettierrc)
+- **Authentication:** Simulated in-memory; `currentUserId` in `App.tsx` can be changed via login screen
+- **Persistence:** All data resets on page refresh (in-memory only)
+- **Project structure:** Flat (no `src/` directory)
